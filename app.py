@@ -34,7 +34,7 @@ if uploaded_file is not None:
     
     # คำนวณสูตรใน DataFrame
     # แก้บรรทัดคำนวณสูตรเป็นแบบนี้ครับ:
-df["ยอดสุทธิ"] = (df.iloc[:, 1] - df.iloc[:, 2].abs()) + df.iloc[:, 3]
+    df["ยอดสุทธิ"] = (df.iloc[:, 1] - df.iloc[:, 2].abs()) + df.iloc[:, 3]
     
     st.write("ตัวอย่างข้อมูลที่ดึงได้:")
     st.dataframe(df)
