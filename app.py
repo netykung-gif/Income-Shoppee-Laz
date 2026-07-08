@@ -4,71 +4,61 @@ import pypdf
 import re
 import io
 
-# ฟังก์ชันดึงข้อมูล Shopee
+st.set_page_config(layout="wide", page_title="Shopee Report Processor")
+st.title("📊 โปรแกรมสรุปรายได้ Shopee (ฉบับรองรับทุกเดือน)")
+
 def get_shopee_data(file):
     reader = pypdf.PdfReader(file)
     data = []
+    
+    # รวมข้อความทุกหน้า
+    full_text = ""
     for page in reader.pages:
-        text = page.extract_text()
-        dates = re.findall(r'\d{4}-\d{2}-\d{2}', text)
-        chunks = re.split(r'\d{4}-\d{2}-\d{2}', text)[1:]
-        
-        for date, chunk in zip(dates, chunks):
-            # แยกบรรทัดและลบค่าว่างออก
-            tokens = [t.strip().replace('−', '-') for t in chunk.split('\n') if t.strip()]
+        full_text += page.extract_text() + "\n"
+    
+    # แยกบรรทัดและหาเฉพาะบรรทัดที่มีวันที่ (YYYY-MM-DD)
+    lines = full_text.split('\n')
+    for line in lines:
+        # ค้นหา pattern วันที่
+        if re.search(r'\d{4}-\d{2}-\d{2}', line):
+            date = re.search(r'\d{4}-\d{2}-\d{2}', line).group()
+            # ดึงตัวเลขทั้งหมดในบรรทัดนั้น (รองรับเครื่องหมายลบและคอมม่า)
+            numbers = re.findall(r'(-?[\d,]+\.?\d*)', line)
             
-            # [จุดสำคัญ] เราจะดึงมาแค่ 4 ตัวแรกเท่านั้น ไม่ว่าบรรทัดนั้นจะมีข้อมูลกี่คอลัมน์ก็ตาม
-            if len(tokens) >= 4:
+            # เราสนใจแค่ 3 ค่าแรกที่สำคัญเสมอ: ราคาสินค้า, ยอดคืนเงิน, เงินสนับสนุน
+            if len(numbers) >= 3:
                 try:
-                    # ใช้แค่ tokens[0] ถึง tokens[3] ตามลำดับ
-                    col1 = date
-                    col2 = float((tokens[0] + tokens[1]).replace(',', '')) # บางทีเลขหลักพันถูกแยกบรรทัด
-                    col3 = float(tokens[2].replace(',', ''))
-                    col4 = float(tokens[3].replace(',', ''))
-                    
                     data.append({
-                        "วันที่": col1,
-                        "ราคาสินค้า": col2,
-                        "ยอดคืนเงิน": col3,
-                        "เงินสนับสนุน": col4
+                        "วันที่": date,
+                        "ราคาสินค้า": float(numbers[0].replace(',', '')),
+                        "ยอดคืนเงิน": float(numbers[1].replace(',', '')),
+                        "เงินสนับสนุน": float(numbers[2].replace(',', ''))
                     })
                 except: continue
-    
+                
     return pd.DataFrame(data)
 
-# หน้าตาเว็บ
-st.title("📊 โปรแกรมสรุปรายได้ Shopee")
-st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
-
-uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"])
+# --- UI ส่วนแสดงผล ---
+uploaded_file = st.file_uploader("อัปโหลดไฟล์ PDF รายงาน Shopee", type=["pdf"])
 
 if uploaded_file is not None:
     df = get_shopee_data(uploaded_file)
     
-    # ลบโค้ดคำนวณเก่าทิ้ง แล้ววางชุดนี้ลงไปแทนครับ
-    
-    # 1. ตั้งชื่อคอลัมน์ใหม่ให้ตรงกันเป๊ะๆ ก่อน
+    if not df.empty:
+        # บังคับตั้งชื่อคอลัมน์ให้แน่นอนก่อนคำนวณ
         df.columns = ["วันที่", "ราคาสินค้า", "ยอดคืนเงิน", "เงินสนับสนุน"]
-    
-    # 2. แปลงทุกอย่างให้เป็นตัวเลขก่อนคำนวณ (กันบัคเลขหลักพัน)
-        df["ราคาสินค้า"] = pd.to_numeric(df["ราคาสินค้า"], errors='coerce')
-        df["ยอดคืนเงิน"] = pd.to_numeric(df["ยอดคืนเงิน"], errors='coerce')
-        df["เงินสนับสนุน"] = pd.to_numeric(df["เงินสนับสนุน"], errors='coerce')
-    
-    # 3. คำนวณสูตร
+        
+        # คำนวณสูตร
         df["ยอดสุทธิ"] = (df["ราคาสินค้า"] - df["ยอดคืนเงิน"].abs()) + df["เงินสนับสนุน"]
-    
-    st.write("ตัวอย่างข้อมูลที่ดึงได้:")
-    st.dataframe(df)
-    
-    # ปุ่มดาวน์โหลด Excel
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Shopee')
-    
-    st.download_button(
-        label="📥 ดาวน์โหลดไฟล์ Excel",
-        data=output.getvalue(),
-        file_name="สรุปรายได้_Shopee.xlsx",
-        mime="application/vnd.ms-excel"
-    )
+        
+        st.success(f"พบข้อมูลทั้งหมด {len(df)} รายการ")
+        st.dataframe(df, use_container_width=True)
+        
+        # ปุ่มดาวน์โหลด
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False)
+        
+        st.download_button("📥 ดาวน์โหลด Excel", output.getvalue(), "Shopee_Report_Final.xlsx", "application/vnd.ms-excel")
+    else:
+        st.error("ไม่พบข้อมูลที่ตรงเงื่อนไข กรุณาตรวจสอบไฟล์ PDF")
