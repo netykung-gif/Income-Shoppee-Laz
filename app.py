@@ -33,7 +33,8 @@ if uploaded_file is not None:
     df = get_shopee_data(uploaded_file)
     
     # คำนวณสูตรใน DataFrame
-    df["ยอดสุทธิ"] = (df["ราคาสินค้า"] - df["ยอดคืนเงิน"].abs()) + df["เงินสนับสนุน"]
+    # แก้บรรทัดคำนวณสูตรเป็นแบบนี้ครับ:
+df["ยอดสุทธิ"] = (df.iloc[:, 1] - df.iloc[:, 2].abs()) + df.iloc[:, 3]
     
     st.write("ตัวอย่างข้อมูลที่ดึงได้:")
     st.dataframe(df)
