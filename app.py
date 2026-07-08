@@ -11,31 +11,31 @@ def get_shopee_data(file):
     reader = pypdf.PdfReader(file)
     data = []
     
-    # รวมข้อความทุกหน้า
-    full_text = ""
     for page in reader.pages:
-        full_text += page.extract_text() + "\n"
-    
-    # แยกบรรทัดและหาเฉพาะบรรทัดที่มีวันที่ (YYYY-MM-DD)
-    lines = full_text.split('\n')
-    for line in lines:
-        # ค้นหา pattern วันที่
-        if re.search(r'\d{4}-\d{2}-\d{2}', line):
-            date = re.search(r'\d{4}-\d{2}-\d{2}', line).group()
-            # ดึงตัวเลขทั้งหมดในบรรทัดนั้น (รองรับเครื่องหมายลบและคอมม่า)
-            numbers = re.findall(r'(-?[\d,]+\.?\d*)', line)
-            
-            # เราสนใจแค่ 3 ค่าแรกที่สำคัญเสมอ: ราคาสินค้า, ยอดคืนเงิน, เงินสนับสนุน
-            if len(numbers) >= 3:
-                try:
+        text = page.extract_text()
+        lines = text.split('\n')
+        
+        for line in lines:
+            # หาบรรทัดที่มีวันที่ YYYY-MM-DD
+            match = re.search(r'\d{4}-\d{2}-\d{2}', line)
+            if match:
+                date = match.group()
+                # แทนที่วันที่ในบรรทัดนั้นด้วยช่องว่าง เพื่อไม่ให้มันนับเลขปีเป็นตัวเลขเงิน
+                cleaned_line = line.replace(date, " ")
+                
+                # ดึงตัวเลขที่เหลือในบรรทัด (คราวนี้จะไม่โดนเลขปีหลอกแล้ว)
+                numbers = re.findall(r'(-?[\d,]+\.?\d*)', cleaned_line)
+                
+                # กรองเอาเฉพาะตัวเลขที่มีค่าจริงๆ (ไม่เอาตัวเลขหลักเดียวที่เป็นเลขหน้า/เลขย่อ)
+                valid_numbers = [float(n.replace(',', '')) for n in numbers if len(n.replace(',', '').replace('.', '')) > 2]
+                
+                if len(valid_numbers) >= 3:
                     data.append({
                         "วันที่": date,
-                        "ราคาสินค้า": float(numbers[0].replace(',', '')),
-                        "ยอดคืนเงิน": float(numbers[1].replace(',', '')),
-                        "เงินสนับสนุน": float(numbers[2].replace(',', ''))
+                        "ราคาสินค้า": valid_numbers[0],
+                        "ยอดคืนเงิน": valid_numbers[1],
+                        "เงินสนับสนุน": valid_numbers[2]
                     })
-                except: continue
-                
     return pd.DataFrame(data)
 
 # --- UI ส่วนแสดงผล ---
