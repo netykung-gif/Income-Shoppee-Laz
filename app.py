@@ -12,15 +12,28 @@ def get_shopee_data(file):
         text = page.extract_text()
         dates = re.findall(r'\d{4}-\d{2}-\d{2}', text)
         chunks = re.split(r'\d{4}-\d{2}-\d{2}', text)[1:]
+        
         for date, chunk in zip(dates, chunks):
+            # แยกบรรทัดและลบค่าว่างออก
             tokens = [t.strip().replace('−', '-') for t in chunk.split('\n') if t.strip()]
+            
+            # [จุดสำคัญ] เราจะดึงมาแค่ 4 ตัวแรกเท่านั้น ไม่ว่าบรรทัดนั้นจะมีข้อมูลกี่คอลัมน์ก็ตาม
             if len(tokens) >= 4:
                 try:
-                    col2 = float((tokens[0] + tokens[1]).replace(',', ''))
+                    # ใช้แค่ tokens[0] ถึง tokens[3] ตามลำดับ
+                    col1 = date
+                    col2 = float((tokens[0] + tokens[1]).replace(',', '')) # บางทีเลขหลักพันถูกแยกบรรทัด
                     col3 = float(tokens[2].replace(',', ''))
                     col4 = float(tokens[3].replace(',', ''))
-                    data.append({"วันที่โอนเงิน": date, "ราคาสินค้า": col2, "ยอดคืนเงิน": col3, "เงินสนับสนุน": col4})
+                    
+                    data.append({
+                        "วันที่": col1,
+                        "ราคาสินค้า": col2,
+                        "ยอดคืนเงิน": col3,
+                        "เงินสนับสนุน": col4
+                    })
                 except: continue
+    
     return pd.DataFrame(data)
 
 # หน้าตาเว็บ
