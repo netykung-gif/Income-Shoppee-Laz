@@ -546,22 +546,24 @@ def get_tiktok_expenses_data(files):
                 else:
                     doc_type = "Unknown Type"
 
-                # --- เลขที่เอกสาร (รองรับทั้ง : ปกติ และ ： แบบเต็มความกว้าง) ---
+                # --- เลขที่เอกสาร (รองรับทั้ง : ปกติ และ ： แบบเต็มความกว้าง, ไม่สนตัวพิมพ์เล็ก-ใหญ่) ---
                 m = re.search(
-                    r"(?:Receipt number|Invoice number|Receipt Number)\s*[:：]\s*([A-Za-z0-9]+)",
+                    r"(?:Receipt number|Invoice number|Receipt Number|Credit note number)\s*[:：]\s*([A-Za-z0-9]+)",
                     text,
+                    re.IGNORECASE,
                 )
                 doc_no = m.group(1) if m else "Unknown"
 
                 # --- วันที่เอกสาร ---
                 m = re.search(
-                    r"(?:Receipt date|Invoice date|Receipt Date)\s*[:：]\s*([A-Za-z]+\s+\d{1,2},\s*\d{4})",
+                    r"(?:Receipt date|Invoice date|Receipt Date|Credit note date)\s*[:：]\s*([A-Za-z]+\s+\d{1,2},\s*\d{4})",
                     text,
+                    re.IGNORECASE,
                 )
                 doc_date = m.group(1) if m else "Unknown"
 
-                # --- ยอดเงินรวม ---
-                m = re.search(r"Total Amount\D*([\d,]+\.\d{2})", text)
+                # --- ยอดเงินรวม (เอกสารบางแบบเขียน "Total amount" ตัว a เล็ก จึงต้องไม่สนตัวพิมพ์เล็ก-ใหญ่) ---
+                m = re.search(r"Total Amount\D*?([\d,]+\.\d{2})", text, re.IGNORECASE)
                 total_amount = parse_num(m.group(1)) if m else None
 
                 data_list.append({
