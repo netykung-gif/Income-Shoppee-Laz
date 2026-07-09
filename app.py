@@ -353,7 +353,6 @@ def get_shopee_expense_data(file):
                 "Total Amount": total_amount
             })
 
-            print(f"Processed Page {idx+1}/{total_pages} | No: {doc_no} | Amount: {total_amount}")
             data_list.append({"Page": idx+1, "Info": text[:50]}) # ตัวอย่าง
             return pd.DataFrame(data_list)
 
