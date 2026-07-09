@@ -213,44 +213,139 @@ def get_shopee_data(file):
     return df, warnings
 
 
+def get_lazada_data(file):
+    """
+    ดึงข้อมูลรายวันจากรายงานการเงิน Lazada (PDF)
+
+    ไฟล์ Lazada ไม่มีปัญหาข้อความตัดขึ้นบรรทัดใหม่กลางคำแบบ Shopee — แต่ละแถวข้อมูล
+    เป็น 1 บรรทัดสมบูรณ์ในรูปแบบ "วันที่ ยอดรายการขาย ค่าธรรมเนียมฯ ... จำนวนเงิน"
+    จึงอ่านด้วย extract_text() ทีละบรรทัดแล้วจับด้วย regex ได้โดยตรง โดยดึงเฉพาะ
+    วันที่ และ "ยอดรายการขาย" (ตัวเลขค่าแรกหลังวันที่) ตามที่ต้องการ
+
+    คืนค่า (DataFrame, list ของข้อความเตือน)
+    """
+    rows = []
+    warnings = []
+    expected_total = None
+
+    with pdfplumber.open(file) as pdf:
+        for page in pdf.pages:
+            text = fix_thai(page.extract_text() or "")
+
+            # ดึงยอดรวม "ยอดรายการขาย" จากแถวท้ายตาราง (รวมจำนวนเงิน ...) ไว้ตรวจสอบ
+            m = re.search(r"รวมจำนวนเงิน\s+([\d,]+\.\d{2})", text)
+            if m:
+                expected_total = parse_num(m.group(1))
+
+            for line in text.split("\n"):
+                line = line.strip()
+                m = re.match(r"^(\d{2}/\d{2}/\d{4})\s+(.+)$", line)
+                if not m:
+                    continue
+                date_str, rest = m.groups()
+                nums = re.findall(r"-?[\d,]+\.\d{2}", rest)
+                if not nums:
+                    continue
+                # แปลงวันที่ dd/mm/yyyy (พ.ศ. ปฏิทินสากลตามที่ระบุในรายงาน) เป็น yyyy-mm-dd
+                d, mth, y = date_str.split("/")
+                iso_date = f"{y}-{mth}-{d}"
+                rows.append({
+                    "วันที่ทำรายการ": iso_date,
+                    "ยอดรายการขาย": parse_num(nums[0]),
+                })
+
+    df = pd.DataFrame(rows)
+
+    if not df.empty and expected_total is not None:
+        actual = df["ยอดรายการขาย"].sum(skipna=True)
+        if abs(actual - expected_total) > 1:
+            warnings.append(
+                f"ผลรวมคอลัมน์ 'ยอดรายการขาย' = {actual:,.2f} แต่ยอดสรุปในรายงานระบุ "
+                f"{expected_total:,.2f} (ต่างกัน {actual - expected_total:,.2f}) — กรุณาตรวจสอบข้อมูลก่อนใช้งาน"
+            )
+
+    return df, warnings
+
+
 # ---------------------------------------------------------------------------
 # หน้าตาเว็บ
 # ---------------------------------------------------------------------------
-st.title("📊 โปรแกรมสรุปรายได้ Shopee")
-st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
+st.title("📊 โปรแกรมสรุปรายได้")
 
-uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"])
+tab_shopee, tab_lazada = st.tabs(["Shopee", "Lazada"])
 
-if uploaded_file is not None:
-    with st.spinner("กำลังอ่านไฟล์..."):
-        df, warnings = get_shopee_data(uploaded_file)
+with tab_shopee:
+    st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
 
-    if df.empty:
-        st.error(
-            "ไม่สามารถดึงข้อมูลจากไฟล์นี้ได้ กรุณาตรวจสอบว่าเป็นไฟล์รายงานการเงิน Shopee "
-            "ที่มีตาราง 'รายละเอียดการโอนเงิน' หรือไม่"
-        )
-    else:
-        # คำนวณสูตรใน DataFrame
-        df["ยอดสุทธิ"] = (df["ราคาสินค้า"] - df["ยอดคืนเงิน"].abs()) + df["เงินสนับสนุน"]
+    uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"], key="shopee_uploader")
 
-        for w in warnings:
-            st.warning(w)
+    if uploaded_file is not None:
+        with st.spinner("กำลังอ่านไฟล์..."):
+            df, warnings = get_shopee_data(uploaded_file)
 
-        if not warnings:
-            st.success(f"ดึงข้อมูลสำเร็จ {len(df)} แถว และผลรวมตรงกับยอดสรุปในรายงาน ✅")
+        if df.empty:
+            st.error(
+                "ไม่สามารถดึงข้อมูลจากไฟล์นี้ได้ กรุณาตรวจสอบว่าเป็นไฟล์รายงานการเงิน Shopee "
+                "ที่มีตาราง 'รายละเอียดการโอนเงิน' หรือไม่"
+            )
+        else:
+            # คำนวณสูตรใน DataFrame
+            df["ยอดสุทธิ"] = (df["ราคาสินค้า"] - df["ยอดคืนเงิน"].abs()) + df["เงินสนับสนุน"]
 
-        st.write("ตัวอย่างข้อมูลที่ดึงได้:")
-        st.dataframe(df)
+            for w in warnings:
+                st.warning(w)
 
-        # ปุ่มดาวน์โหลด Excel
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-            df.to_excel(writer, index=False, sheet_name="Shopee")
+            if not warnings:
+                st.success(f"ดึงข้อมูลสำเร็จ {len(df)} แถว และผลรวมตรงกับยอดสรุปในรายงาน ✅")
 
-        st.download_button(
-            label="📥 ดาวน์โหลดไฟล์ Excel",
-            data=output.getvalue(),
-            file_name="สรุปรายได้_Shopee.xlsx",
-            mime="application/vnd.ms-excel",
-        )
+            st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+            st.dataframe(df)
+
+            # ปุ่มดาวน์โหลด Excel
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                df.to_excel(writer, index=False, sheet_name="Shopee")
+
+            st.download_button(
+                label="📥 ดาวน์โหลดไฟล์ Excel",
+                data=output.getvalue(),
+                file_name="สรุปรายได้_Shopee.xlsx",
+                mime="application/vnd.ms-excel",
+                key="shopee_download",
+            )
+
+with tab_lazada:
+    st.write("อัปโหลดไฟล์ PDF รายงาน Lazada เพื่อดึงวันที่และยอดรายการขาย")
+
+    uploaded_file_lzd = st.file_uploader("เลือกไฟล์ PDF ของ Lazada", type=["pdf"], key="lazada_uploader")
+
+    if uploaded_file_lzd is not None:
+        with st.spinner("กำลังอ่านไฟล์..."):
+            df_lzd, warnings_lzd = get_lazada_data(uploaded_file_lzd)
+
+        if df_lzd.empty:
+            st.error(
+                "ไม่สามารถดึงข้อมูลจากไฟล์นี้ได้ กรุณาตรวจสอบว่าเป็นไฟล์รายงานการเงิน Lazada "
+                "ที่มีตาราง 'รายละเอียดธุรกรรม' หรือไม่"
+            )
+        else:
+            for w in warnings_lzd:
+                st.warning(w)
+
+            if not warnings_lzd:
+                st.success(f"ดึงข้อมูลสำเร็จ {len(df_lzd)} แถว และผลรวมตรงกับยอดสรุปในรายงาน ✅")
+
+            st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+            st.dataframe(df_lzd)
+
+            output_lzd = io.BytesIO()
+            with pd.ExcelWriter(output_lzd, engine="xlsxwriter") as writer:
+                df_lzd.to_excel(writer, index=False, sheet_name="Lazada")
+
+            st.download_button(
+                label="📥 ดาวน์โหลดไฟล์ Excel",
+                data=output_lzd.getvalue(),
+                file_name="สรุปรายได้_Lazada.xlsx",
+                mime="application/vnd.ms-excel",
+                key="lazada_download",
+            )
