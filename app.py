@@ -275,12 +275,12 @@ def get_expense_shopee_data(file, source_type):
     """
     data_list = []
     with pdfplumber.open(file) as pdf:
+        total_pages = len(pdf.pages)
+        
         for idx, page in enumerate(pdf.pages):
             text = page.extract_text() or ""
             lines = [line.strip() for line in text.split('\n') if line.strip()]
-            reader = pypdf.PdfReader(pdf_path)
-total_pages = len(pdf.pages)
-print(f"Total pages: {total_pages}")
+
 
 # สร้าง List สำหรับเก็บข้อมูลแต่ละแถวเพื่อทำเป็นตาราง
 data_list = []
