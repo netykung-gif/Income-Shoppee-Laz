@@ -4,69 +4,64 @@ import pdfplumber
 import re
 import io
 
-# --- 1. ฟังก์ชันดึงข้อมูล Shopee ---
+# --- ฟังก์ชันช่วยเหลือ (คงเดิมจากไฟล์ดึงรายได้) ---
+PUA_MAP = {"\uf70a": "\u0e48", "\uf70b": "\u0e49", "\uf70e": "\u0e4c"}
+def fix_thai(s):
+    if not s: return s
+    for bad, good in PUA_MAP.items(): s = s.replace(bad, good)
+    return s
+
+# --- ฟังก์ชันดึงค่าใช้จ่าย Shopee (ปรับปรุงจากไฟล์ Shoppee Expenses) ---
 def get_shopee_expense_data(file):
     data_list = []
     with pdfplumber.open(file) as pdf:
         for idx, page in enumerate(pdf.pages):
             text = page.extract_text() or ""
-            if not text: continue
             lines = [line.strip() for line in text.split('\n') if line.strip()]
-            
             shopee = "Shopee" in text or "Receipt/Tax Invoice" in text
             spx = "SPX Express" in text or ("Receipt" in text and not shopee)
             
-            doc_no, doc_date, total_amount = "Unknown", "Unknown", "Unknown"
-            
+            doc_no, doc_date, total_amount = "Unknown", "Unknown", "0.0"
             for i, line in enumerate(lines):
                 if ("เลขที่" in line or "No." in line) and re.search(r"[A-Z]{3,}", line):
-                    top_match = re.search(r"([A-Z0-9\-]{10,})", line)
-                    if top_match:
-                        doc_no = top_match.group(1)
-                        if i + 1 < len(lines):
-                            bottom_match = re.search(r"([0-9]{4,}\-[0-9]{4,}|[0-9\-]{6,15})", lines[i+1])
-                            if bottom_match: doc_no = f"{doc_no} / {bottom_match.group(1)}"
-                
+                    match = re.search(r"([A-Z0-9\-]{10,})", line)
+                    if match: doc_no = match.group(1)
                 if "วันที่" in line or "Date" in line:
                     date_match = re.search(r"(\d{2}/\d{2}/\d{4})", line)
                     if date_match: doc_date = date_match.group(1)
-
-            shopee_match = re.search(r"Included VAT\)?\s*([\d,]+\.\d{2})", text, re.IGNORECASE) or \
-                           re.search(r"Total Value of Services \(Included VAT\)\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
-            spx_match = re.search(r"Total amount\s*([\d,]+\.\d{2})", text, re.IGNORECASE) or \
-                        re.search(r"จำนวนเงินรวม/\s*Total\s*amount\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
             
-            if shopee and shopee_match: total_amount = shopee_match.group(1)
-            elif spx and spx_match: total_amount = spx_match.group(1)
+            total_match = re.search(r"Total(?: amount| Value of Services)?.*?\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
+            if total_match: total_amount = total_match.group(1).replace(",", "")
             
-            try: total_amount = float(total_amount.replace(",", "")) if total_amount != "Unknown" else 0.0
-            except: total_amount = 0.0
-            
-            data_list.append({"Page": idx+1, "Company": "Shopee" if shopee else "SPX Express", "Doc No.": doc_no, "Date": doc_date, "Total": total_amount})
+            data_list.append({"Page": idx+1, "Company": "Shopee/SPX", "Doc No.": doc_no, "Date": doc_date, "Total": float(total_amount)})
     return pd.DataFrame(data_list)
 
-# --- 2. ฟังก์ชันดึงข้อมูล Lazada ---
+# --- ฟังก์ชันดึงค่าใช้จ่าย Lazada (ปรับปรุงจากไฟล์ Lazada Expenses) ---
 def get_lazada_expense_data(file):
     rows = []
     with pdfplumber.open(file) as pdf:
         for idx, page in enumerate(pdf.pages):
             text = page.extract_text() or ""
             for line in text.split("\n"):
-                m = re.match(r"^(\d{2}/\d{2}/\d{4})\s+(.+)$", line.strip())
+                m = re.match(r"^(\d{2}/\d{2}/\d{4})\s+(.+?)\s+([\d,]+\.\d{2})", line.strip())
                 if m:
-                    date_str, rest = m.groups()
-                    nums = re.findall(r"-?[\d,]+\.\d{2}", rest)
-                    if nums:
-                        d, mth, y = date_str.split("/")
-                        rows.append({"Page": idx+1, "Date": f"{y}-{mth}-{d}", "Total": float(nums[0].replace(",", ""))})
+                    date, desc, amount = m.groups()
+                    rows.append({"Page": idx+1, "Date": date, "Desc": desc, "Total": float(amount.replace(",", ""))})
     return pd.DataFrame(rows)
 
-# --- 3. ส่วนหน้าเว็บ Streamlit ---
-st.title("📊 โปรแกรมสรุปค่าใช้จ่าย")
-tab1, tab2 = st.tabs(["Shopee", "Lazada"])
+# --- ส่วนหน้าเว็บ Streamlit ---
+st.title("📊 ระบบจัดการ Shopee & Lazada")
+tab1, tab2, tab3, tab4 = st.tabs(["รายได้ Shopee", "รายได้ Lazada", "ค่าใช้จ่าย Shopee", "ค่าใช้จ่าย Lazada"])
 
+# --- ใส่โค้ดดึงรายได้เดิมของคุณใน tab1 และ tab2 ---
 with tab1:
-    f = st.file_uploader("อัปโหลดไฟล์ Shopee", type=["pdf"], key="shopee")
+    st.write("โค้ดดึงรายได้ Shopee เดิมของคุณ")
+with tab2:
+    st.write("โค้ดดึงรายได้ Lazada เดิมของคุณ")
+
+# --- ส่วนค่าใช้จ่ายใหม่ ---
+with tab3:
+    f = st.file_uploader("Upload PDF ค่าใช้จ่าย Shopee", type=["pdf"], key="s_exp")
     if f:
         df = get_shopee_expense_data(f)
         st.dataframe(df)
@@ -74,8 +69,8 @@ with tab1:
         df.to_excel(buf, index=False)
         st.download_button("ดาวน์โหลด Excel Shopee", buf.getvalue(), "Shopee_Expense.xlsx")
 
-with tab2:
-    f = st.file_uploader("อัปโหลดไฟล์ Lazada", type=["pdf"], key="lazada")
+with tab4:
+    f = st.file_uploader("Upload PDF ค่าใช้จ่าย Lazada", type=["pdf"], key="l_exp")
     if f:
         df = get_lazada_expense_data(f)
         st.dataframe(df)
