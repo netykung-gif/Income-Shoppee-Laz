@@ -394,110 +394,110 @@ def get_expense_Lazada_data(file, source_type):
     total_pages = len(pdf.pages)
     print(f"Total pages: {total_pages}")
 
-# สร้าง List สำหรับเก็บข้อมูลแต่ละแถวเพื่อทำเป็นตาราง
-data_list = []
+    # สร้าง List สำหรับเก็บข้อมูลแต่ละแถวเพื่อทำเป็นตาราง
+    data_list = []
 
-for idx, page in enumerate(reader.pages):
-    text = page.extract_text()
-    if not text:
-        continue
+    for idx, page in enumerate(reader.pages):
+        text = page.extract_text()
+        if not text:
+            continue
         
-    lines = [line.strip() for line in text.split('\n') if line.strip()]
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
     
-    company_name = "Lazada"
-    doc_type = "Unknown Type"
-    doc_no = "Unknown"
-    doc_date = "Unknown"
-    total_amount = "Unknown"
+        company_name = "Lazada"
+        doc_type = "Unknown Type"
+        doc_no = "Unknown"
+        doc_date = "Unknown"
+        total_amount = "Unknown"
 
-    # --- 1. เช็คชื่อบริษัท และ ประเภทเอกสาร ---
-    if "Lazada Express" in text or "ลาซาด้า เอ็กซ์เพรส" in text:
-        company_name = "Lazada Express"
-        
-    if "CREDIT NOTE" in text:
-        doc_type = "Credit Note"
-    elif "Shipping Fee Receipt" in text:
-        doc_type = "Shipping Fee"
-    elif "TAX INVOICE" in text:
-        doc_type = "Tax Invoice"
+        # --- 1. เช็คชื่อบริษัท และ ประเภทเอกสาร ---
+        if "Lazada Express" in text or "ลาซาด้า เอ็กซ์เพรส" in text:
+            company_name = "Lazada Express"
+            
+        if "CREDIT NOTE" in text:
+            doc_type = "Credit Note"
+        elif "Shipping Fee Receipt" in text:
+            doc_type = "Shipping Fee"
+        elif "TAX INVOICE" in text:
+            doc_type = "Tax Invoice"
 
-    # --- 2. วิ่งเจาะหา No., Date และ ยอดเงินรวม ---
-    for i, line in enumerate(lines):
-        # หาเลขที่เอกสาร
-        if "Credit Note:" in line:
-            no_match = re.search(r"Credit Note:\s*([A-Za-z0-9\-]+)", line, re.IGNORECASE)
-            if no_match:
-                doc_no = no_match.group(1)
-        elif "Invoice No.:" in line:
-            no_match = re.search(r"Invoice No\.:\s*([A-Za-z0-9\-]+)", line, re.IGNORECASE)
-            if no_match:
-                doc_no = no_match.group(1)
+        # --- 2. วิ่งเจาะหา No., Date และ ยอดเงินรวม ---
+        for i, line in enumerate(lines):
+            # หาเลขที่เอกสาร
+            if "Credit Note:" in line:
+                no_match = re.search(r"Credit Note:\s*([A-Za-z0-9\-]+)", line, re.IGNORECASE)
+                if no_match:
+                    doc_no = no_match.group(1)
+            elif "Invoice No.:" in line:
+                no_match = re.search(r"Invoice No\.:\s*([A-Za-z0-9\-]+)", line, re.IGNORECASE)
+                if no_match:
+                    doc_no = no_match.group(1)
 
-        # หาวันที่เอกสาร
-        if "Invoice Date:" in line:
-            date_match = re.search(r"Invoice Date:\s*([\d\-]+)", line, re.IGNORECASE)
-            if date_match:
-                doc_date = date_match.group(1)
-        elif "Date:" in line and "Digitally" not in line:
-            date_match = re.search(r"Date:\s*([\d\-]+)", line, re.IGNORECASE)
-            if date_match:
-                doc_date = date_match.group(1)
+            # หาวันที่เอกสาร
+            if "Invoice Date:" in line:
+                date_match = re.search(r"Invoice Date:\s*([\d\-]+)", line, re.IGNORECASE)
+                if date_match:
+                    doc_date = date_match.group(1)
+            elif "Date:" in line and "Digitally" not in line:
+                date_match = re.search(r"Date:\s*([\d\-]+)", line, re.IGNORECASE)
+                if date_match:
+                    doc_date = date_match.group(1)
 
-        # หาจำนวนเงินรวม (ดึงยอดที่มีทศนิยมจากบรรทัดสรุปของตาราง)
-        if "Total (Including Tax)" in line:
-            amt_match = re.search(r"([\d,]+\.\d{2})", line)
-            if amt_match:
-                total_amount = amt_match.group(1)
-        elif "Net Total Shipping Fee" in line:
-            amt_match = re.search(r"([\d,]+\.\d{2})", line)
-            if amt_match:
-                total_amount = amt_match.group(1)
+            # หาจำนวนเงินรวม (ดึงยอดที่มีทศนิยมจากบรรทัดสรุปของตาราง)
+            if "Total (Including Tax)" in line:
+                amt_match = re.search(r"([\d,]+\.\d{2})", line)
+                if amt_match:
+                    total_amount = amt_match.group(1)
+            elif "Net Total Shipping Fee" in line:
+                amt_match = re.search(r"([\d,]+\.\d{2})", line)
+                if amt_match:
+                    total_amount = amt_match.group(1)
 
-    # ตัวช่วยสำรองขุดหายอดเงิน: ถ้าหาตามคำสำคัญข้างบนไม่เจอจริงๆ ให้เอาตัวเลขทศนิยมตัวสุดท้ายในตารางมา
-    if total_amount == "Unknown":
-        all_amounts = []
-        for line in lines:
-            amt_match = re.findall(r"([\d,]+\.\d{2})", line)
-            if amt_match:
-                if "7%" not in line and "3%" not in line and "1%" not in line:
-                    all_amounts.extend(amt_match)
-        if all_amounts:
+        # ตัวช่วยสำรองขุดหายอดเงิน: ถ้าหาตามคำสำคัญข้างบนไม่เจอจริงๆ ให้เอาตัวเลขทศนิยมตัวสุดท้ายในตารางมา
+        if total_amount == "Unknown":
+            all_amounts = []
+            for line in lines:
+                amt_match = re.findall(r"([\d,]+\.\d{2})", line)
+                if amt_match:
+                    if "7%" not in line and "3%" not in line and "1%" not in line:
+                        all_amounts.extend(amt_match)
+            if all_amounts:
             total_amount = all_amounts[-1]
 
-    # แปลงยอดเงินให้เป็นตัวเลขประเภท float สำหรับนำไปคำนวณต่อใน Excel ได้ทันที (ลบคอมมาออก)
-    if total_amount != "Unknown":
-        try:
-            total_amount = float(total_amount.replace(",", ""))
-        except ValueError:
-            pass
+        # แปลงยอดเงินให้เป็นตัวเลขประเภท float สำหรับนำไปคำนวณต่อใน Excel ได้ทันที (ลบคอมมาออก)
+        if total_amount != "Unknown":
+            try:
+                total_amount = float(total_amount.replace(",", ""))
+            except ValueError:
+                pass
 
-    # เพิ่มข้อมูลเข้าไปในรูปแบบ Dictionary
-    data_list.append({
-        "Page": idx + 1,
-        "Company": company_name,
-        "Document Type": doc_type,
-        "Document No.": doc_no,
-        "Date": doc_date,
-        "Total Amount": total_amount
-    })
+        # เพิ่มข้อมูลเข้าไปในรูปแบบ Dictionary
+        data_list.append({
+            "Page": idx + 1,
+            "Company": company_name,
+            "Document Type": doc_type,
+            "Document No.": doc_no,
+            "Date": doc_date,
+            "Total Amount": total_amount
+        })
 
-    print(f"Processed Page {idx+1}/{total_pages}")
+        print(f"Processed Page {idx+1}/{total_pages}")
 
-# --- 3. แปลงเป็น DataFrame และส่งออกไฟล์ Excel ---
-print("\nกำลังแปลงข้อมูลและจัดรูปแบบลง Excel...")
-df = pd.DataFrame(data_list)
+    # --- 3. แปลงเป็น DataFrame และส่งออกไฟล์ Excel ---
+    print("\nกำลังแปลงข้อมูลและจัดรูปแบบลง Excel...")
+    df = pd.DataFrame(data_list)
 
-# ใช้ ExcelWriter เพื่อเปิดใช้งานตัวจัดฟอร์แมตอัตโนมัติ
-with pd.ExcelWriter(output_excel_path, engine='openpyxl') as writer_excel:
-    df.to_excel(writer_excel, index=False, sheet_name='Lazada Data')
+    # ใช้ ExcelWriter เพื่อเปิดใช้งานตัวจัดฟอร์แมตอัตโนมัติ
+    with pd.ExcelWriter(output_excel_path, engine='openpyxl') as writer_excel:
+        df.to_excel(writer_excel, index=False, sheet_name='Lazada Data')
     
-    # ดึงเอกสารชีตมาขยายความกว้างคอลัมน์อัตโนมัติ จะได้ไม่ขึ้นหน้าต่างข้อความแคบเกินไป
-    workbook = writer_excel.book
-    worksheet = writer_excel.sheets['Lazada Data']
-    for col in worksheet.columns:
-        max_len = max(len(str(cell.value or '')) for cell in col)
-        col_letter = col[0].column_letter
-        worksheet.column_dimensions[col_letter].width = max(max_len + 3, 12)
+        # ดึงเอกสารชีตมาขยายความกว้างคอลัมน์อัตโนมัติ จะได้ไม่ขึ้นหน้าต่างข้อความแคบเกินไป
+        workbook = writer_excel.book
+        worksheet = writer_excel.sheets['Lazada Data']
+        for col in worksheet.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = col[0].column_letter
+            worksheet.column_dimensions[col_letter].width = max(max_len + 3, 12)
 
 
 
