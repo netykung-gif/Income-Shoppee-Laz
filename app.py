@@ -368,7 +368,6 @@ config = [
     {"tab": tabs[0], "func": get_shopee_data, "name": "รายได้ Shopee"},
     {"tab": tabs[1], "func": get_lazada_data, "name": "รายได้ Lazada"},
     {"tab": tabs[2], "func": get_shopee_expense_data, "name": "ค่าใช้จ่าย Shopee"},
-    {"tab": tabs[3], "func": get_lazada_expense_data, "name": "ค่าใช้จ่าย Lazada"},
 ]
 
 for item in config:
