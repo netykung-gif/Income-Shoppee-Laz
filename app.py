@@ -284,7 +284,7 @@ def get_shopee_expense_data(file):
                 # หาบรรทัดที่เป็นเลขที่เอกสารหลัก (ต้องมีตัวพิมพ์ใหญ่ยาว ๆ เช่น TRSPEMKP หรือ RCSPXSPW)
                 if ("เลขที่" in line or "No." in line) and re.search(r"[A-Z]{3,}", line):
                     top_match = re.search(r"([A-Z0-9\-]{10,})", line)
-                      if top_match:
+                    if top_match:
                         top_no = top_match.group(1)
                         bottom_no = ""
                 
