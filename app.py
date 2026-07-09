@@ -462,7 +462,7 @@ def get_expense_Lazada_data(file, source_type):
                     if "7%" not in line and "3%" not in line and "1%" not in line:
                         all_amounts.extend(amt_match)
             if all_amounts:
-            total_amount = all_amounts[-1]
+                total_amount = all_amounts[-1]
 
         # แปลงยอดเงินให้เป็นตัวเลขประเภท float สำหรับนำไปคำนวณต่อใน Excel ได้ทันที (ลบคอมมาออก)
         if total_amount != "Unknown":
