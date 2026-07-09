@@ -272,6 +272,7 @@ def get_shopee_expense_data(file):
     with pdfplumber.open(file) as pdf:
         for idx, page in enumerate(pdf.pages):
             text = page.extract_text() or ""
+            lines = [line.strip() for line in text.split('\n') if line.strip()]
             shopee = "Shopee" in text or "Receipt/Tax Invoice" in text
             spx = "SPX Express" in text or ("Receipt" in text and not shopee)
    
