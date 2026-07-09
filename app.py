@@ -391,8 +391,8 @@ def get_expense_shopee_data(file, source_type):
 
 def get_expense_Lazada_data(file, source_type):
     reader = pypdf.PdfReader(pdf_path)
-total_pages = len(reader.pages)
-print(f"Total pages: {total_pages}")
+    total_pages = len(pdf.pages)
+    print(f"Total pages: {total_pages}")
 
 # สร้าง List สำหรับเก็บข้อมูลแต่ละแถวเพื่อทำเป็นตาราง
 data_list = []
