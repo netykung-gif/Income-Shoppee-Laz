@@ -504,13 +504,87 @@ def get_shopee_expenses_data(files):
     return pd.DataFrame(data_list)
 
 
+def get_tiktok_expenses_data(files):
+    """
+    ดึงข้อมูลจากใบเสร็จ/ใบกำกับภาษีค่าใช้จ่ายฝั่ง TikTok Shop (ไฟล์ PDF หลายหน้า
+    แต่ละหน้า = 1 เอกสาร) เอกสารมีหลายรูปแบบย่อย เช่น ค่าขนส่ง (Thai Happy Logistics),
+    ค่าธรรมเนียม Affiliate (TikTok Pte. Ltd.), ค่าคอมมิชชั่นครีเอเตอร์ (Creator name)
+    จึงต้องดึง "เวนเดอร์" (ชื่อที่อยู่มุมซ้ายบนของเอกสาร) แยกออกมาต่างหาก เพราะแต่ละ
+    เอกสารเป็นคนละนิติบุคคล/บุคคลกัน
+
+    คืนค่า DataFrame คอลัมน์: ไฟล์, Page, Company, Vendor, Document Type, Document No., Date, Total Amount
+    """
+    data_list = []
+    for file in files:
+        with pdfplumber.open(file) as pdf:
+            for idx, page in enumerate(pdf.pages):
+                text = fix_thai(page.extract_text() or "")
+                if not text:
+                    continue
+
+                # --- เวนเดอร์ (ชื่อมุมซ้ายบนของเอกสาร) ---
+                vendor = "Unknown"
+                m = re.search(r"Creator name:\s*(.+)", text)
+                if m:
+                    vendor = m.group(1).strip()
+                else:
+                    m = re.search(r"^(.*(?:Ltd\.|Co\., Ltd\.|Pte\. Ltd\.).*)$", text, re.MULTILINE)
+                    if m:
+                        vendor = m.group(1).strip()
+
+                # --- ประเภทเอกสาร ---
+                if "Creator commission" in text:
+                    doc_type = "Creator Commission"
+                elif "Logistics fee" in text or "Logistics" in text:
+                    doc_type = "Logistics Fee"
+                elif "Affiliate Service Fee" in text or "Affiliate commission" in text:
+                    doc_type = "Affiliate Service Fee"
+                elif "CREDIT NOTE" in text:
+                    doc_type = "Credit Note"
+                elif "TAX INVOICE" in text or "Tax Invoice" in text:
+                    doc_type = "Tax Invoice"
+                else:
+                    doc_type = "Unknown Type"
+
+                # --- เลขที่เอกสาร (รองรับทั้ง : ปกติ และ ： แบบเต็มความกว้าง) ---
+                m = re.search(
+                    r"(?:Receipt number|Invoice number|Receipt Number)\s*[:：]\s*([A-Za-z0-9]+)",
+                    text,
+                )
+                doc_no = m.group(1) if m else "Unknown"
+
+                # --- วันที่เอกสาร ---
+                m = re.search(
+                    r"(?:Receipt date|Invoice date|Receipt Date)\s*[:：]\s*([A-Za-z]+\s+\d{1,2},\s*\d{4})",
+                    text,
+                )
+                doc_date = m.group(1) if m else "Unknown"
+
+                # --- ยอดเงินรวม ---
+                m = re.search(r"Total Amount\D*([\d,]+\.\d{2})", text)
+                total_amount = parse_num(m.group(1)) if m else None
+
+                data_list.append({
+                    "ไฟล์": getattr(file, "name", ""),
+                    "Page": idx + 1,
+                    "Company": "TikTok Shop",
+                    "Vendor": vendor,
+                    "Document Type": doc_type,
+                    "Document No.": doc_no,
+                    "Date": doc_date,
+                    "Total Amount": total_amount,
+                })
+
+    return pd.DataFrame(data_list)
+
+
 # ---------------------------------------------------------------------------
 # หน้าตาเว็บ
 # ---------------------------------------------------------------------------
 st.title("📊 โปรแกรมสรุปรายได้")
 
-tab_shopee, tab_lazada, tab_lzd_exp, tab_shp_exp = st.tabs(
-    ["Shopee (รายรับ)", "Lazada (รายรับ)", "Lazada (ค่าใช้จ่าย)", "Shopee/SPX (ค่าใช้จ่าย)"]
+tab_shopee, tab_lazada, tab_lzd_exp, tab_shp_exp, tab_ttk_exp = st.tabs(
+    ["Shopee (รายรับ)", "Lazada (รายรับ)", "Lazada (ค่าใช้จ่าย)", "Shopee/SPX (ค่าใช้จ่าย)", "TikTok (ค่าใช้จ่าย)"]
 )
 
 with tab_shopee:
@@ -647,4 +721,37 @@ with tab_shp_exp:
                 file_name="ค่าใช้จ่าย_Shopee_SPX.xlsx",
                 mime="application/vnd.ms-excel",
                 key="shp_exp_download",
+            )
+
+with tab_ttk_exp:
+    st.write(
+        "อัปโหลดไฟล์ PDF ใบเสร็จ/ใบกำกับภาษีค่าใช้จ่ายฝั่ง TikTok Shop "
+        "(ค่าขนส่ง / ค่าธรรมเนียม Affiliate / ค่าคอมมิชชั่นครีเอเตอร์ ฯลฯ — อัปโหลดได้หลายไฟล์ แต่ละหน้าถือเป็น 1 เอกสาร)"
+    )
+
+    files_ttk_exp = st.file_uploader(
+        "เลือกไฟล์ PDF ค่าใช้จ่าย TikTok", type=["pdf"], accept_multiple_files=True, key="ttk_exp_uploader"
+    )
+
+    if files_ttk_exp:
+        with st.spinner("กำลังอ่านไฟล์..."):
+            df_ttk_exp = get_tiktok_expenses_data(files_ttk_exp)
+
+        if df_ttk_exp.empty:
+            st.error("ไม่สามารถดึงข้อมูลจากไฟล์ที่อัปโหลดได้")
+        else:
+            st.success(f"ดึงข้อมูลสำเร็จ {len(df_ttk_exp)} รายการ")
+            st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+            st.dataframe(df_ttk_exp)
+
+            output_ttk_exp = io.BytesIO()
+            with pd.ExcelWriter(output_ttk_exp, engine="xlsxwriter") as writer:
+                df_ttk_exp.to_excel(writer, index=False, sheet_name="TikTok Expenses")
+
+            st.download_button(
+                label="📥 ดาวน์โหลดไฟล์ Excel",
+                data=output_ttk_exp.getvalue(),
+                file_name="ค่าใช้จ่าย_TikTok.xlsx",
+                mime="application/vnd.ms-excel",
+                key="ttk_exp_download",
             )
