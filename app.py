@@ -285,7 +285,7 @@ print(f"Total pages: {total_pages}")
 # สร้าง List สำหรับเก็บข้อมูลแต่ละแถวเพื่อทำเป็นตาราง
 data_list = []
 
-for idx, page in enumerate(reader.pages):
+for idx, page in enumerate(pdf.pages):
     text = page.extract_text()
     if not text:
         continue
