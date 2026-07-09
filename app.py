@@ -267,85 +267,118 @@ def get_lazada_data(file):
     return df, warnings
 
 
+def get_shopee_expense_data(file):
+    data_list = []
+    with pdfplumber.open(file) as pdf:
+        for idx, page in enumerate(pdf.pages):
+            text = page.extract_text() or ""
+            shopee = "Shopee" in text or "Receipt/Tax Invoice" in text
+    spx = "SPX Express" in text or ("Receipt" in text and not shopee)
+   
+    total_amount = "Unknown"
+    doc_no = "Unknown"
+    doc_date = "Unknown"
+   
+    # --- 1. สกัดเลขที่เอกสาร (2 บรรทัด) และวันที่ ---
+    for i, line in enumerate(lines):
+        # หาบรรทัดที่เป็นเลขที่เอกสารหลัก (ต้องมีตัวพิมพ์ใหญ่ยาว ๆ เช่น TRSPEMKP หรือ RCSPXSPW)
+        if ("เลขที่" in line or "No." in line) and re.search(r"[A-Z]{3,}", line):
+            top_match = re.search(r"([A-Z0-9\-]{10,})", line)
+            if top_match:
+                top_no = top_match.group(1)
+                bottom_no = ""
+                
+                # ส่องบรรทัดถัดไปทันทีเพื่อเอาเลขชุดล่าง
+                if i + 1 < len(lines):
+                    next_line = lines[i + 1]
+                    bottom_match = re.search(r"([0-9]{4,}\-[0-9]{4,})", next_line)
+                    if not bottom_match:
+                        bottom_match = re.search(r"([0-9\-]{6,15})", next_line)
+                        
+                    if bottom_match:
+                        bottom_no = bottom_match.group(1)
+                
+                if bottom_no:
+                    doc_no = f"{top_no} / {bottom_no}"
+                else:
+                    doc_no = top_no
+        
+        # ดึงวันที่ (Date) จากบรรทัด "วันที่/ Date" ในตารางฝั่งขวา
+        if "วันที่" in line or "Date" in line:
+            date_match = re.search(r"(\d{2}/\d{2}/\d{4})", line)
+            if date_match:
+                doc_date = date_match.group(1)
+
+    # --- 2. สกัดจำนวนเงินรวม (Total Amount) ---
+    shopee_match = re.search(r"Included VAT\)?\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
+    if not shopee_match:
+        shopee_match = re.search(r"Total Value of Services \(Included VAT\)\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
+   
+    spx_match = re.search(r"Total amount\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
+    if not spx_match:
+        spx_match = re.search(r"จำนวนเงินรวม/\s*Total\s*amount\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
+   
+    if shopee:
+        company_name = "Shopee"
+        doc_type = "Tax Invoice"
+        if shopee_match:
+            total_amount = shopee_match.group(1)
+    elif spx:
+        company_name = "SPX Express"
+        doc_type = "Shipping Fee"
+        if spx_match:
+            total_amount = spx_match.group(1)
+    else:
+        company_name = "Unknown"
+        doc_type = "Unknown Type"
+        total_match = re.search(r"(?:Total|รวม)\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
+        if total_match:
+            total_amount = total_match.group(1)
+
+    # แปลงยอดเงินให้เป็น float เพื่อให้ Excel นำไปกดบวก ลบ คูณ หาร หรือใช้สูตร SUM ต่อได้เลย
+    if total_amount != "Unknown":
+        try:
+            total_amount = float(total_amount.replace(",", ""))
+        except ValueError:
+            pass
+
+    # เก็บรวมข้อมูล
+    data_list.append({
+        "Page": idx + 1,
+        "Company": company_name,
+        "Document Type": doc_type,
+        "Document No.": doc_no,
+        "Date": doc_date,
+        "Total Amount": total_amount
+    })
+
+    print(f"Processed Page {idx+1}/{total_pages} | No: {doc_no} | Amount: {total_amount}")
+    data_list.append({"Page": idx+1, "Info": text[:50]}) # ตัวอย่าง
+    return pd.DataFrame(data_list)
+
+
 # ---------------------------------------------------------------------------
 # หน้าตาเว็บ
 # ---------------------------------------------------------------------------
-st.title("📊 โปรแกรมสรุปรายได้")
+st.title("📊 ระบบสรุปงาน Shopee & Lazada")
+tabs = st.tabs(["รายได้ Shopee", "รายได้ Lazada", "ค่าใช้จ่าย Shopee", "ค่าใช้จ่าย Lazada"])
 
-tab_shopee, tab_lazada = st.tabs(["Shopee", "Lazada"])
+# กำหนดฟังก์ชันและ key ให้แต่ละ tab
+config = [
+    {"tab": tabs[0], "func": get_shopee_data, "name": "รายได้ Shopee"},
+    {"tab": tabs[1], "func": get_lazada_data, "name": "รายได้ Lazada"},
+    {"tab": tabs[2], "func": get_shopee_expense_data, "name": "ค่าใช้จ่าย Shopee"},
+    {"tab": tabs[3], "func": get_lazada_expense_data, "name": "ค่าใช้จ่าย Lazada"},
+]
 
-with tab_shopee:
-    st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
-
-    uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"], key="shopee_uploader")
-
-    if uploaded_file is not None:
-        with st.spinner("กำลังอ่านไฟล์..."):
-            df, warnings = get_shopee_data(uploaded_file)
-
-        if df.empty:
-            st.error(
-                "ไม่สามารถดึงข้อมูลจากไฟล์นี้ได้ กรุณาตรวจสอบว่าเป็นไฟล์รายงานการเงิน Shopee "
-                "ที่มีตาราง 'รายละเอียดการโอนเงิน' หรือไม่"
-            )
-        else:
-            # คำนวณสูตรใน DataFrame
-            df["ยอดสุทธิ"] = (df["ราคาสินค้า"] - df["ยอดคืนเงิน"].abs()) + df["เงินสนับสนุน"]
-
-            for w in warnings:
-                st.warning(w)
-
-            if not warnings:
-                st.success(f"ดึงข้อมูลสำเร็จ {len(df)} แถว และผลรวมตรงกับยอดสรุปในรายงาน ✅")
-
-            st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+for item in config:
+    with item["tab"]:
+        uploaded_file = st.file_uploader(f"อัปโหลดไฟล์ {item['name']}", type=["pdf"], key=item["name"])
+        if uploaded_file:
+            df = item["func"](uploaded_file)
+            if isinstance(df, tuple): df = df[0] # รองรับฟังก์ชันที่มี return 2 ค่า
             st.dataframe(df)
-
-            # ปุ่มดาวน์โหลด Excel
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                df.to_excel(writer, index=False, sheet_name="Shopee")
-
-            st.download_button(
-                label="📥 ดาวน์โหลดไฟล์ Excel",
-                data=output.getvalue(),
-                file_name="สรุปรายได้_Shopee.xlsx",
-                mime="application/vnd.ms-excel",
-                key="shopee_download",
-            )
-
-with tab_lazada:
-    st.write("อัปโหลดไฟล์ PDF รายงาน Lazada เพื่อดึงวันที่และยอดรายการขาย")
-
-    uploaded_file_lzd = st.file_uploader("เลือกไฟล์ PDF ของ Lazada", type=["pdf"], key="lazada_uploader")
-
-    if uploaded_file_lzd is not None:
-        with st.spinner("กำลังอ่านไฟล์..."):
-            df_lzd, warnings_lzd = get_lazada_data(uploaded_file_lzd)
-
-        if df_lzd.empty:
-            st.error(
-                "ไม่สามารถดึงข้อมูลจากไฟล์นี้ได้ กรุณาตรวจสอบว่าเป็นไฟล์รายงานการเงิน Lazada "
-                "ที่มีตาราง 'รายละเอียดธุรกรรม' หรือไม่"
-            )
-        else:
-            for w in warnings_lzd:
-                st.warning(w)
-
-            if not warnings_lzd:
-                st.success(f"ดึงข้อมูลสำเร็จ {len(df_lzd)} แถว และผลรวมตรงกับยอดสรุปในรายงาน ✅")
-
-            st.write("ตัวอย่างข้อมูลที่ดึงได้:")
-            st.dataframe(df_lzd)
-
-            output_lzd = io.BytesIO()
-            with pd.ExcelWriter(output_lzd, engine="xlsxwriter") as writer:
-                df_lzd.to_excel(writer, index=False, sheet_name="Lazada")
-
-            st.download_button(
-                label="📥 ดาวน์โหลดไฟล์ Excel",
-                data=output_lzd.getvalue(),
-                file_name="สรุปรายได้_Lazada.xlsx",
-                mime="application/vnd.ms-excel",
-                key="lazada_download",
-            )
+            # ปุ่มดาวน์โหลด
+            buf = io.BytesIO()
+            df.to_excel(buf, index=False)
+            st.download_button(f"โหลด Excel {item['name']}", buf.getvalue(), f"{item['name']}.xlsx")
