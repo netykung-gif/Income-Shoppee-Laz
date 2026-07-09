@@ -583,3 +583,20 @@ with tab_lazada:
                 mime="application/vnd.ms-excel",
                 key="lazada_download",
             )
+
+tab_shopee_exp, tab_lazada_exp = st.tabs(["ค่าใช้จ่าย Shopee/SPX", "ค่าใช้จ่าย Lazada"])
+
+with tab_shopee_exp:
+    st.write("อัปโหลดไฟล์ PDF ใบเสร็จ/ใบกำกับภาษี Shopee หรือ SPX")
+    uploaded_file_exp = st.file_uploader("เลือกไฟล์ PDF ค่าใช้จ่าย Shopee", type=["pdf"], key="exp_shopee")
+    if uploaded_file_exp:
+        # นำ Logic การสกัดข้อมูลจาก Shoppee Expenses PDF File read.py มาใส่ที่นี่
+        # สรุปผลเป็นตาราง และสร้างปุ่มดาวน์โหลด Excel
+        pass
+
+with tab_lazada_exp:
+    st.write("อัปโหลดไฟล์ PDF ใบเสร็จ/ใบกำกับภาษี Lazada")
+    uploaded_file_exp_lzd = st.file_uploader("เลือกไฟล์ PDF ค่าใช้จ่าย Lazada", type=["pdf"], key="exp_lazada")
+    if uploaded_file_exp_lzd:
+        # นำ Logic การสกัดข้อมูลจาก Lazada Expenses PDF File read.py มาใส่ที่นี่
+        pass
