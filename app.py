@@ -723,17 +723,6 @@ def render_tiktok_expense():
         file_name="ค่าใช้จ่าย_TikTok.xlsx", mime="application/vnd.ms-excel", key="ttk_exp_download",
     )
 
-# 1. ย้ายปุ่มเลือกแพลตฟอร์มมาไว้ที่ Sidebar
-with st.sidebar:
-    st.title("เลือกแพลตฟอร์ม")
-    platform = st.radio(
-        "เลือกช่องทางที่คุณต้องการจัดการ:",
-        ["Shopee", "Lazada", "TikTok"],
-        index=0
-    )
-    st.divider()
-    st.info("💡 เลือกแพลตฟอร์มที่เมนูด้านบน แล้วเลือกประเภทเอกสารที่ต้องการอัปโหลด")
-
 # 2. ปรับหัวข้อหลักให้ดูสะอาดตา
 st.title("📊 สรุปรายได้ / ค่าใช้จ่าย")
 cols = st.columns(3)
