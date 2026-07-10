@@ -585,7 +585,7 @@ def get_tiktok_expenses_data(files):
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="สรุปรายได้/ค่าใช้จ่าย", page_icon="📊", layout="centered")
 
-st.title("สรุปรายได้ / ค่าใช้จ่าย")
+st.title("        สรุปรายได้ / ค่าใช้จ่าย")
 
 
 def render_shopee_income():
