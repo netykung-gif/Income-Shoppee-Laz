@@ -585,7 +585,7 @@ def get_tiktok_expenses_data(files):
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="สรุปรายได้/ค่าใช้จ่าย", page_icon="📊", layout="wide")
 
-st.title("📊 สรุปรายได้ / ค่าใช้จ่าย")
+st.title("📊 โปรแกรมสรุปรายได้ / ค่าใช้จ่าย")
 
 
 def render_shopee_income():
@@ -734,10 +734,10 @@ current_platform = st.session_state.platform
 
 theme_css = "<style>"
 theme_css += (
-    "div[data-testid='stHorizontalBlock'] button{height:88px; border-radius:32px; "
-    "font-size:100px; font-weight:600; color:#222 !important; border-width:0 0 3px 0 !important; "
+    "div[data-testid='stHorizontalBlock'] button{height:88px; border-radius:12px; "
+    "font-size:15px; font-weight:600; color:#222 !important; border-width:0 0 3px 0 !important; "
     "border-style:solid !important; transition:transform .15s ease, box-shadow .15s ease;}"
-    "div[data-testid='stHorizontalBlock'] button:hover{transform:translateY(0px); "
+    "div[data-testid='stHorizontalBlock'] button:hover{transform:translateY(-3px); "
     "box-shadow:0 8px 16px rgba(0,0,0,.12);}"
 )
 for i, key in enumerate(PLATFORM_KEYS, start=1):
@@ -751,18 +751,34 @@ for i, key in enumerate(PLATFORM_KEYS, start=1):
 theme_css += "</style>"
 st.markdown(theme_css, unsafe_allow_html=True)
 
-cols = st.columns(3)
+col_ratio = [2 if k == current_platform else 1 for k in PLATFORM_KEYS]
+cols = st.columns(col_ratio)
 for col, key in zip(cols, PLATFORM_KEYS):
     with col:
         if st.button(PLATFORMS[key]["label"], key=f"platform_btn_{key}", use_container_width=True):
             st.session_state.platform = key
             st.rerun()
 
+
+def section_toggle(key_prefix, options):
+    state_key = f"{key_prefix}_section"
+    if state_key not in st.session_state:
+        st.session_state[state_key] = options[0]
+    btn_cols = st.columns(len(options))
+    for c, opt in zip(btn_cols, options):
+        with c:
+            btn_type = "primary" if opt == st.session_state[state_key] else "secondary"
+            if st.button(opt, key=f"{key_prefix}_btn_{opt}", use_container_width=True, type=btn_type):
+                st.session_state[state_key] = opt
+                st.rerun()
+    return st.session_state[state_key]
+
+
 if current_platform == "shopee":
-    section = st.radio("เลือกประเภทข้อมูล", ["รายรับ", "ค่าใช้จ่าย (Shopee/SPX)"], horizontal=True, key="shopee_section")
+    section = section_toggle("shopee", ["รายรับ", "ค่าใช้จ่าย (Shopee/SPX)"])
     _ = render_shopee_income() if section == "รายรับ" else render_shopee_expense()
 elif current_platform == "lazada":
-    section = st.radio("เลือกประเภทข้อมูล", ["รายรับ", "ค่าใช้จ่าย"], horizontal=True, key="lazada_section")
+    section = section_toggle("lazada", ["รายรับ", "ค่าใช้จ่าย"])
     _ = render_lazada_income() if section == "รายรับ" else render_lazada_expense()
 else:
     _ = render_tiktok_expense()
