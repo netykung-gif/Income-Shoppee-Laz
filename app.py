@@ -599,7 +599,7 @@ st.markdown("""
     cursor: pointer;
 }
 </style>
-""", unsafe_html=true)
+""", unsafe_html=True)
 
 # --- 2. Logic การเลือก (วางแทนที่แผงปุ่มเดิม) ---
 st.title("📊 สรุปรายได้ / ค่าใช้จ่าย")
