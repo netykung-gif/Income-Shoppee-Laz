@@ -602,9 +602,6 @@ with cols[2]:
 # --- 2. Logic การเลือก (วางแทนที่แผงปุ่มเดิม) ---
 st.title("📊 สรุปรายได้ / ค่าใช้จ่าย")
 
-# สร้าง Columns เพื่อวาง Card
-cols = st.columns(3)
-
 # ดึงค่าปัจจุบันมาเช็ค (ถ้าไม่มีให้เป็น 'shopee')
 if "platform" not in st.session_state:
     st.session_state.platform = "shopee"
@@ -623,25 +620,3 @@ with cols[2]:
         st.rerun()
 
 st.divider()
-
-# --- 3. ส่วนแสดงเนื้อหา (อันเดิมของคุณ) ---
-current_platform = st.session_state.platform
-
-# 3. ใช้ Tabs แยก รายรับ/รายจ่าย
-if platform == "Shopee":
-    tab1, tab2 = st.tabs(["💰 รายรับ", "📉 ค่าใช้จ่าย (Shopee/SPX)"])
-    with tab1:
-        render_shopee_income()
-    with tab2:
-        render_shopee_expense()
-
-elif platform == "Lazada":
-    tab1, tab2 = st.tabs(["💰 รายรับ", "📉 ค่าใช้จ่าย"])
-    with tab1:
-        render_lazada_income()
-    with tab2:
-        render_lazada_expense()
-
-elif platform == "TikTok":
-    # TikTok มีแค่ค่าใช้จ่ายตามโจทย์เดิม
-    render_tiktok_expense()
