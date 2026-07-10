@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import pdfplumber
 import re
@@ -732,8 +733,9 @@ if current_platform not in PLATFORMS:
     current_platform = "shopee"
 
 panel_parts = [
-    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2/dist/tabler-icons.min.css">',
-    '<div style="display:flex; gap:6px; margin-bottom:1.2rem; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;">',
+    '<html><head><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2/dist/tabler-icons.min.css">',
+    '<style>html,body{margin:0;padding:0;background:transparent;}</style></head><body>',
+    '<div style="display:flex; gap:6px; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;">',
 ]
 for key, p in PLATFORMS.items():
     active = key == current_platform
@@ -741,15 +743,16 @@ for key, p in PLATFORMS.items():
     flex = 2 if active else 1
     panel_parts.append(
         f'<a href="?platform={key}" target="_top" style="text-decoration:none; color:inherit; flex:{flex}; transition:flex .25s ease;">'
-        f'<div onmouseover="this.style.flexGrow=2" style="background:{p["tint"]}; border-radius:12px; border-bottom:3px solid {border}; padding:18px 16px; cursor:pointer; height:96px; display:flex; flex-direction:column; justify-content:flex-end;">'
+        f'<div onmouseover="this.style.flexGrow=2" onmouseout="this.style.flexGrow={flex}" '
+        f'style="background:{p["tint"]}; border-radius:12px; border-bottom:3px solid {border}; padding:18px 16px; cursor:pointer; height:96px; display:flex; flex-direction:column; justify-content:flex-end; box-sizing:border-box;">'
         f'<i class="ti {p["icon"]}" style="font-size:22px; color:{p["color"]}; margin-bottom:6px;"></i>'
         f'<div style="font-size:15px; font-weight:600; color:#222;">{p["label"]}</div>'
         f'</div></a>'
     )
-panel_parts.append("</div>")
+panel_parts.append("</div></body></html>")
 panels_html = "".join(panel_parts)
 
-st.markdown(panels_html, unsafe_allow_html=True)
+components.html(panels_html, height=120, scrolling=False)
 
 if current_platform == "shopee":
     section = st.radio("เลือกประเภทข้อมูล", ["รายรับ", "ค่าใช้จ่าย (Shopee/SPX)"], horizontal=True, key="shopee_section")
