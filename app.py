@@ -584,42 +584,50 @@ def get_tiktok_expenses_data(files):
 # หน้าตาเว็บ
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="สรุปรายได้/ค่าใช้จ่าย", page_icon="📊", layout="wide")
+st.title("📊 โปรแกรมสรุปรายได้ / ค่าใช้จ่าย")
 
-# --- การตั้งค่า Platform ---
-PLATFORMS = ["🛍️ Shopee", "❤️ Lazada", "🎵 TikTok"]
+# 2. นิยาม Platform และ Label
+# เราใช้ Dictionary เพื่อแยก Key (เอาไปใช้ใน code) กับ Label (ให้คนอ่าน)
+PLATFORM_OPTIONS = {
+    "shopee": "🛍️ Shopee",
+    "lazada": "❤️ Lazada",
+    "tiktok": "🎵 TikTok"
+}
 
-# ตั้งค่าสถานะ
+# 3. กำหนดค่าเริ่มต้น
 if "platform" not in st.session_state:
-    st.session_state.platform = PLATFORMS[0]
+    st.session_state.platform = "shopee"
 
-# --- ใช้ st.radio แทนปุ่ม เพื่อให้ได้สถานะ Active ที่ชัดเจน ---
-# ข้อดี: เลือกแล้วสีจะค้างชัดเจน และดูเป็นธรรมชาติกว่าปุ่ม
-current_platform = st.radio(
-    "เลือกแพลตฟอร์ม:",
-    PLATFORMS,
-    index=PLATFORMS.index(st.session_state.platform),
+# 4. ใช้ st.radio แทนปุ่ม CSS (แก้ปัญหา Error Index และสีสัน)
+# สลับการแสดงผลให้เป็นแนวนอน
+selected_label = st.radio(
+    "เลือกแพลตฟอร์มที่ต้องการ:",
+    list(PLATFORM_OPTIONS.values()),
+    index=list(PLATFORM_OPTIONS.keys()).index(st.session_state.platform),
     horizontal=True,
-    label_visibility="collapsed"
+    label_visibility="hidden"
 )
 
-# อัปเดตสถานะเมื่อมีการเลือกใหม่
-if current_platform != st.session_state.platform:
-    st.session_state.platform = current_platform
-    st.rerun()
+# อัปเดต session_state เมื่อเปลี่ยนแพลตฟอร์ม
+for key, label in PLATFORM_OPTIONS.items():
+    if selected_label == label:
+        st.session_state.platform = key
 
 st.divider()
 
-# --- ส่วน Logic แสดงผล ---
-# ใช้ชื่อ Platform เพื่อเช็คเงื่อนไข
-platform_key = st.session_state.platform.split(" ")[1].lower() # ดึงคำว่า shopee, lazada, tiktok
+# 5. แสดงผลตามแพลตฟอร์มที่เลือก
+current = st.session_state.platform
+st.subheader(f"กำลังจัดการ: {PLATFORM_OPTIONS[current]}")
 
-st.subheader(f"จัดการข้อมูล: {st.session_state.platform}")
+if current == "shopee":
+    section = st.radio("เลือกรายการ:", ["รายรับ", "ค่าใช้จ่าย (Shopee/SPX)"], horizontal=True)
+    if section == "รายรับ": render_shopee_income()
+    else: render_shopee_expense()
 
-if platform_key == "shopee":
-    section = st.radio("ประเภท:", ["รายรับ", "ค่าใช้จ่าย (Shopee/SPX)"], horizontal=True)
-    # เรียกฟังก์ชัน...
-elif platform_key == "lazada":
-    section = st.radio("ประเภท:", ["รายรับ", "ค่าใช้จ่าย"], horizontal=True)
-    # เรียกฟังก์ชัน...
-else:
+elif current == "lazada":
+    section = st.radio("เลือกรายการ:", ["รายรับ", "ค่าใช้จ่าย"], horizontal=True)
+    if section == "รายรับ": render_lazada_income()
+    else: render_lazada_expense()
+
+else: # tiktok
     render_tiktok_expense()
