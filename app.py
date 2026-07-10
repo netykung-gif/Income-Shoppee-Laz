@@ -584,13 +584,20 @@ def get_tiktok_expenses_data(files):
 # หน้าตาเว็บ
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="สรุปรายได้/ค่าใช้จ่าย", page_icon="📊", layout="wide")
-st.markdown("""
-<style>
-    .card { background-color: #ffffff; border-radius: 12px; padding: 20px; 
-            border: 1px solid #ddd; text-align: center; margin-bottom: 10px; }
-    .card:hover { border: 2px solid #EE4D2D; cursor: pointer; }
-</style>
-""", unsafe_html=True)
+
+# 1. ย้ายปุ่มเลือกแพลตฟอร์มมาไว้ที่ Sidebar
+with st.sidebar:
+    st.title("เลือกแพลตฟอร์ม")
+    platform = st.radio(
+        "เลือกช่องทางที่คุณต้องการจัดการ:",
+        ["Shopee", "Lazada", "TikTok"],
+        index=0
+    )
+    st.divider()
+    st.info("💡 เลือกแพลตฟอร์มที่เมนูด้านบน แล้วเลือกประเภทเอกสารที่ต้องการอัปโหลด")
+
+# 2. ปรับหัวข้อหลักให้ดูสะอาดตา
+st.title(f"📊 ระบบจัดการข้อมูล: {platform}")
 
 def render_shopee_income():
     st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
@@ -723,34 +730,13 @@ def render_tiktok_expense():
         file_name="ค่าใช้จ่าย_TikTok.xlsx", mime="application/vnd.ms-excel", key="ttk_exp_download",
     )
 
-# 2. ปรับหัวข้อหลักให้ดูสะอาดตา
-st.title("📊 สรุปรายได้ / ค่าใช้จ่าย")
-cols = st.columns(3)
-
-if "platform" not in st.session_state:
-    st.session_state.platform = "shopee"
-
-with cols[0]:
-    if st.button("🛍️ Shopee", use_container_width=True):
-        st.session_state.platform = "shopee"
-        st.rerun()
-with cols[1]:
-    if st.button("❤️ Lazada", use_container_width=True):
-        st.session_state.platform = "lazada"
-        st.rerun()
-with cols[2]:
-    if st.button("🎵 TikTok", use_container_width=True):
-        st.session_state.platform = "tiktok"
-        st.rerun()
-
-st.divider()
-current_platform = st.session_state.platform
-
 # 3. ใช้ Tabs แยก รายรับ/รายจ่าย
 if platform == "Shopee":
     tab1, tab2 = st.tabs(["💰 รายรับ", "📉 ค่าใช้จ่าย (Shopee/SPX)"])
-    with tab1: render_shopee_income()
-    with tab2: render_shopee_expense()
+    with tab1:
+        render_shopee_income()
+    with tab2:
+        render_shopee_expense()
 
 elif platform == "Lazada":
     tab1, tab2 = st.tabs(["💰 รายรับ", "📉 ค่าใช้จ่าย"])
