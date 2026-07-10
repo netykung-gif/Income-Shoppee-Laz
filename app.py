@@ -591,7 +591,7 @@ st.markdown("""
     border-radius: 12px;
     padding: 20px;
     border: 1px solid #ddd;
-    text-align: center;
+    text-aligh center;
     margin-bottom: 10px;
 }
 .card:hover {
@@ -599,7 +599,7 @@ st.markdown("""
     cursor: pointer;
 }
 </style>
-""", unsafe_html=True)
+""", unsafe_html=true)
 
 # --- 2. Logic การเลือก (วางแทนที่แผงปุ่มเดิม) ---
 st.title("📊 สรุปรายได้ / ค่าใช้จ่าย")
