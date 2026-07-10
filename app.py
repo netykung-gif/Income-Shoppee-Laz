@@ -591,71 +591,96 @@ if "platform" not in st.session_state:
 
 current_platform = st.session_state.platform
 
-# --- 3. CSS สไตล์ Pinterest (ล็อกเป้าเฉพาะ 3 ปุ่มบนเท่านั้น ไม่กวนปุ่มอื่น!) ---
-# ใช้ nth-of-type(1) เพื่อบอกว่า "เปลี่ยนแค่แถวแรกสุดนะ แถวอื่นอย่าไปยุ่ง"
+# --- 3. 🎨 ทลายขีดจำกัด Streamlit: แปลงปุ่มให้เป็นการ์ด Pinterest ---
 st.markdown("""
 <style>
-    /* สไตล์ Card พื้นฐานสำหรับ 3 ปุ่มบน */
-    div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:nth-of-type(1) button {
-        height: 120px !important; 
-        border-radius: 16px !important; 
+    /* ล็อกเป้าเฉพาะ 3 ปุ่มบน (แพลตฟอร์ม) ให้กลายเป็น Card แนวตั้ง */
+    div[data-testid="stHorizontalBlock"]:first-of-type button {
+        height: 180px !important; /* ความสูงของการ์ด */
+        border-radius: 24px !important; /* ขอบมนกริบแบบ Pinterest */
         background-color: #ffffff !important;
-        border: 2px solid #f0f0f0 !important;
-        transition: all 0.2s ease-in-out !important;
-        font-size: 22px !important; 
-        font-weight: bold !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.04) !important;
-        color: #555555 !important;
+        border: none !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.06) !important; /* เงาฟุ้งๆ ดูแพง */
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important; /* เด้งสมูทตอนเอาเมาส์ชี้ */
     }
     
-    /* เอฟเฟกต์เด้งตอนเอาเมาส์ชี้ */
-    div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:nth-of-type(1) button:hover {
-        transform: translateY(-5px) !important;
-        box-shadow: 0 12px 20px rgba(0,0,0,0.08) !important;
-        border-color: #d5d5d5 !important;
+    /* เอฟเฟกต์ตอนชี้เมาส์ (Hover): การ์ดลอยขึ้นและเงาเข้มขึ้น */
+    div[data-testid="stHorizontalBlock"]:first-of-type button:hover {
+        transform: translateY(-12px) !important; 
+        box-shadow: 0 16px 32px rgba(0,0,0,0.12) !important;
+    }
+
+    /* จัดระเบียบตัวหนังสือและไอคอนในการ์ด */
+    div[data-testid="stHorizontalBlock"]:first-of-type button p {
+        font-size: 26px !important; /* ขยายฟอนต์ให้ใหญ่ตูม */
+        font-weight: 800 !important;
+        color: #444 !important;
+        white-space: pre-line !important; /* อนุญาตให้ขึ้นบรรทัดใหม่ได้ */
+        line-height: 1.3 !important;
+    }
+    
+    /* ซ่อนกรอบสีแดงตอนคลิกปุ่ม */
+    div[data-testid="stHorizontalBlock"]:first-of-type button:focus:not(:active) {
+        color: inherit;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. CSS ไฮไลท์สีตาม Platform ที่เลือกอยู่ (Active State) ---
+# --- 4. 🎨 ใส่สีแพลตฟอร์มให้การ์ดที่ถูกเลือกอยู่ (Active State) ---
 if current_platform == "shopee":
-    active_idx, active_color, active_bg = 1, "#EE4D2D", "#FDEEEA"
-elif current_platform == "lazada":
-    active_idx, active_color, active_bg = 2, "#1B1F8A", "#ECEDF7"
-else:
-    active_idx, active_color, active_bg = 3, "#111111", "#F5F5F5"
+    st.markdown("""
+    <style>
+    div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-child(1) button {
+        background: linear-gradient(135deg, #ff7315, #EE4D2D) !important; /* ไล่สีส้ม Shopee */
+        box-shadow: 0 12px 28px rgba(238, 77, 45, 0.35) !important;
+    }
+    div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-child(1) button p { color: #ffffff !important; }
+    </style>
+    """, unsafe_allow_html=True)
 
-st.markdown(f"""
-<style>
-    div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:nth-of-type(1) div[data-testid="column"]:nth-child({active_idx}) button {{
-        border-color: {active_color} !important; 
-        background-color: {active_bg} !important; 
-        color: {active_color} !important;
-        box-shadow: 0 8px 15px {active_color}33 !important;
-    }}
-</style>
-""", unsafe_allow_html=True)
+elif current_platform == "lazada":
+    st.markdown("""
+    <style>
+    div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-child(2) button {
+        background: linear-gradient(135deg, #2a2dbb, #1B1F8A) !important; /* ไล่สีน้ำเงิน Lazada */
+        box-shadow: 0 12px 28px rgba(27, 31, 138, 0.35) !important;
+    }
+    div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-child(2) button p { color: #ffffff !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
+elif current_platform == "tiktok":
+    st.markdown("""
+    <style>
+    div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-child(3) button {
+        background: linear-gradient(135deg, #333333, #000000) !important; /* ไล่สีดำ TikTok */
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35) !important;
+    }
+    div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-child(3) button p { color: #ffffff !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
 
 st.title("📊 โปรแกรมสรุปรายได้ / ค่าใช้จ่าย")
 
-# --- 5. วางปุ่ม Platform 3 ปุ่ม (จะถูกครอบด้วย CSS ด้านบนอัตโนมัติ) ---
+# --- 5. สร้างการ์ด (ใส่ \n เพื่อดันให้ตัวหนังสือลงมาอยู่ใต้ไอคอนแบบ Pinterest) ---
 cols = st.columns(3)
 with cols[0]:
-    if st.button("🛍️ Shopee", use_container_width=True):
+    if st.button("🛍️\nShopee", use_container_width=True):
         st.session_state.platform = "shopee"
         st.rerun()
 with cols[1]:
-    if st.button("❤️ Lazada", use_container_width=True):
+    if st.button("❤️\nLazada", use_container_width=True):
         st.session_state.platform = "lazada"
         st.rerun()
 with cols[2]:
-    if st.button("🎵 TikTok", use_container_width=True):
+    if st.button("🎵\nTikTok", use_container_width=True):
         st.session_state.platform = "tiktok"
         st.rerun()
 
 st.divider()
 
-# --- 6. ฟังก์ชันการดึงข้อมูล (โค้ดเดิมของคุณ) ---
+# --- 6. ฟังก์ชันการทำงาน (ไม่ต้องแก้ ปลอดภัย 100%) ---
 def render_shopee_income():
     st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
     uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"], key="shopee_uploader")
@@ -713,7 +738,7 @@ def render_tiktok_expense():
         st.success(f"ดึงข้อมูลสำเร็จ {len(df_ttk_exp)} รายการ")
         st.dataframe(df_ttk_exp)
 
-# --- 7. ฟังก์ชันปุ่มเลือก รายรับ/รายจ่าย (อันนี้ทำงานได้ปกติแล้ว เพราะเราไม่เอา CSS ไปกวนมัน) ---
+# --- 7. ปุ่มสลับ รายรับ/รายจ่าย ด้านล่าง (ทำงานปกติ) ---
 def section_toggle(key_prefix, options):
     state_key = f"{key_prefix}_section"
     if state_key not in st.session_state:
@@ -728,7 +753,6 @@ def section_toggle(key_prefix, options):
                 st.rerun()
     return st.session_state[state_key]
 
-# --- 8. แสดงผลเนื้อหา ---
 st.subheader(f"จัดการข้อมูล: {current_platform.capitalize()}")
 
 if current_platform == "shopee":
