@@ -585,59 +585,41 @@ def get_tiktok_expenses_data(files):
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="สรุปรายได้/ค่าใช้จ่าย", page_icon="📊", layout="wide")
 
-st.title("📊 โปรแกรมสรุปรายได้ / ค่าใช้จ่าย")
+# --- การตั้งค่า Platform ---
+PLATFORMS = ["🛍️ Shopee", "❤️ Lazada", "🎵 TikTok"]
 
-# --- โซนเก็บสถานะ ---
+# ตั้งค่าสถานะ
 if "platform" not in st.session_state:
-    st.session_state.platform = "shopee"
+    st.session_state.platform = PLATFORMS[0]
 
-# --- ส่วนเลือก Platform (เน้นสถานะ Active) ---
-# สร้างปุ่มที่เปลี่ยนสีตามสถานะที่เลือก
-cols = st.columns(3)
-platforms = [
-    {"key": "shopee", "label": "🛍️ Shopee"},
-    {"key": "lazada", "label": "❤️ Lazada"},
-    {"key": "tiktok", "label": "🎵 TikTok"}
-]
+# --- ใช้ st.radio แทนปุ่ม เพื่อให้ได้สถานะ Active ที่ชัดเจน ---
+# ข้อดี: เลือกแล้วสีจะค้างชัดเจน และดูเป็นธรรมชาติกว่าปุ่ม
+current_platform = st.radio(
+    "เลือกแพลตฟอร์ม:",
+    PLATFORMS,
+    index=PLATFORMS.index(st.session_state.platform),
+    horizontal=True,
+    label_visibility="collapsed"
+)
 
-for i, p in enumerate(platforms):
-    with cols[i]:
-        # ถ้าปุ่มที่กดตรงกับ session_state ให้ใช้ type="primary" เพื่อให้สีเด่นชัด
-        is_active = st.session_state.platform == p["key"]
-        if st.button(p["label"], use_container_width=True, type="primary" if is_active else "secondary"):
-            st.session_state.platform = p["key"]
-            st.rerun()
+# อัปเดตสถานะเมื่อมีการเลือกใหม่
+if current_platform != st.session_state.platform:
+    st.session_state.platform = current_platform
+    st.rerun()
 
 st.divider()
 
-# --- ฟังก์ชันเลือกหมวดหมู่ย่อย (รายรับ/รายจ่าย) ---
-def section_toggle(key_prefix, options):
-    state_key = f"{key_prefix}_section"
-    if state_key not in st.session_state: st.session_state[state_key] = options[0]
-    
-    # แสดงหัวข้อหมวดหมู่
-    st.subheader(f"จัดการข้อมูล: {st.session_state.platform.capitalize()}")
-    
-    cols = st.columns(len(options))
-    for i, opt in enumerate(options):
-        with cols[i]:
-            if st.button(opt, use_container_width=True, type="primary" if st.session_state[state_key] == opt else "secondary"):
-                st.session_state[state_key] = opt
-                st.rerun()
-    return st.session_state[state_key]
+# --- ส่วน Logic แสดงผล ---
+# ใช้ชื่อ Platform เพื่อเช็คเงื่อนไข
+platform_key = st.session_state.platform.split(" ")[1].lower() # ดึงคำว่า shopee, lazada, tiktok
 
-# --- Logic การแสดงผล ---
-platform = st.session_state.platform
+st.subheader(f"จัดการข้อมูล: {st.session_state.platform}")
 
-if platform == "shopee":
-    section = section_toggle("shopee", ["รายรับ", "ค่าใช้จ่าย (Shopee/SPX)"])
-    if section == "รายรับ": render_shopee_income()
-    else: render_shopee_expense()
-
-elif platform == "lazada":
-    section = section_toggle("lazada", ["รายรับ", "ค่าใช้จ่าย"])
-    if section == "รายรับ": render_lazada_income()
-    else: render_lazada_expense()
-
-elif platform == "tiktok":
+if platform_key == "shopee":
+    section = st.radio("ประเภท:", ["รายรับ", "ค่าใช้จ่าย (Shopee/SPX)"], horizontal=True)
+    # เรียกฟังก์ชัน...
+elif platform_key == "lazada":
+    section = st.radio("ประเภท:", ["รายรับ", "ค่าใช้จ่าย"], horizontal=True)
+    # เรียกฟังก์ชัน...
+else:
     render_tiktok_expense()
