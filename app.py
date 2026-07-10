@@ -584,12 +584,21 @@ def get_tiktok_expenses_data(files):
 # หน้าตาเว็บ
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="สรุปรายได้/ค่าใช้จ่าย", page_icon="📊", layout="wide")
-st.html("""
-<style>
-    .card { background-color: white; border-radius: 12px; padding: 20px; border: 1px solid #ddd; }
-</style>
-""")
+def draw_card(title, icon):
+    with st.container(border=True):
+        st.markdown(f"### {icon} {title}")
+        if st.button(f"เลือก {title}", key=f"btn_{title}"):
+            st.session_state.platform = title.lower()
+            st.rerun()
 
+# ส่วนการใช้งาน
+cols = st.columns(3)
+with cols[0]:
+    draw_card("Shopee", "🛍️")
+with cols[1]:
+    draw_card("Lazada", "❤️")
+with cols[2]:
+    draw_card("TikTok", "🎵")
 # --- 2. Logic การเลือก (วางแทนที่แผงปุ่มเดิม) ---
 st.title("📊 สรุปรายได้ / ค่าใช้จ่าย")
 
