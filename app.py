@@ -604,8 +604,8 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:first-of-type button {
         height: 180px !important; 
         border-radius: 24px !important; 
-        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-        font-size: 26px !important; 
+        transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+        font-size: 56px !important; 
         font-weight: 800 !important;
         white-space: pre-line !important;
         line-height: 1.3 !important;
