@@ -584,24 +584,10 @@ def get_tiktok_expenses_data(files):
 # หน้าตาเว็บ
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="สรุปรายได้/ค่าใช้จ่าย", page_icon="📊", layout="wide")
-def draw_card(title, icon):
-    with st.container(border=True):
-        st.markdown(f"### {icon} {title}")
-        if st.button(f"เลือก {title}", key=f"btn_{title}"):
-            st.session_state.platform = title.lower()
-            st.rerun()
-
-# ส่วนการใช้งาน
-cols = st.columns(3)
-with cols[0]:
-    draw_card("Shopee", "🛍️")
-with cols[1]:
-    draw_card("Lazada", "❤️")
-with cols[2]:
-    draw_card("TikTok", "🎵")
-# --- 2. Logic การเลือก (วางแทนที่แผงปุ่มเดิม) ---
-st.title("📊 สรุปรายได้ / ค่าใช้จ่าย")
-
+ 
+st.title("📊 โปรแกรมสรุปรายได้ / ค่าใช้จ่าย")
+ 
+ 
 def render_shopee_income():
     st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
     uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"], key="shopee_uploader")
@@ -732,22 +718,67 @@ def render_tiktok_expense():
         label="📥 ดาวน์โหลดไฟล์ Excel", data=output_ttk_exp.getvalue(),
         file_name="ค่าใช้จ่าย_TikTok.xlsx", mime="application/vnd.ms-excel", key="ttk_exp_download",
     )
-
-# ดึงค่าปัจจุบันมาเช็ค (ถ้าไม่มีให้เป็น 'shopee')
+ 
+ 
+# --- แผงเลือกแพลตฟอร์ม: ปุ่ม Streamlit จริง (คลิกได้ชัวร์ 100%) แต่งสีตามธีมแบรนด์ + ยกตัวตอน hover ---
+PLATFORMS = {
+    "shopee": {"label": "🛍️ Shopee", "color": "#EE4D2D", "tint": "#FDEEEA"},
+    "lazada": {"label": "❤️ Lazada", "color": "#1B1F8A", "tint": "#ECEDF7"},
+    "tiktok": {"label": "🎵 TikTok", "color": "#111111", "tint": "#FBEAF0"},
+}
+PLATFORM_KEYS = list(PLATFORMS.keys())
+ 
 if "platform" not in st.session_state:
     st.session_state.platform = "shopee"
-
-with cols[0]:
-    if st.button("🛍️ Shopee", use_container_width=True):
-        st.session_state.platform = "shopee"
-        st.rerun()
-with cols[1]:
-    if st.button("❤️ Lazada", use_container_width=True):
-        st.session_state.platform = "lazada"
-        st.rerun()
-with cols[2]:
-    if st.button("🎵 TikTok", use_container_width=True):
-        st.session_state.platform = "tiktok"
-        st.rerun()
-
-st.divider()
+current_platform = st.session_state.platform
+ 
+theme_css = "<style>"
+theme_css += (
+    "div[data-testid='stHorizontalBlock'] button{height:88px; border-radius:12px; "
+    "font-size:15px; font-weight:600; color:#222 !important; border-width:0 0 3px 0 !important; "
+    "border-style:solid !important; transition:transform .15s ease, box-shadow .15s ease;}"
+    "div[data-testid='stHorizontalBlock'] button:hover{transform:translateY(-3px); "
+    "box-shadow:0 8px 16px rgba(0,0,0,.12);}"
+)
+for i, key in enumerate(PLATFORM_KEYS, start=1):
+    p = PLATFORMS[key]
+    active = key == current_platform
+    border = p["color"] if active else "transparent"
+    theme_css += (
+        f"div[data-testid='stHorizontalBlock'] > div:nth-of-type({i}) button{{"
+        f"background:{p['tint']} !important; border-color:{border} !important;}}"
+    )
+theme_css += "</style>"
+st.markdown(theme_css, unsafe_allow_html=True)
+ 
+col_ratio = [2 if k == current_platform else 1 for k in PLATFORM_KEYS]
+cols = st.columns(col_ratio)
+for col, key in zip(cols, PLATFORM_KEYS):
+    with col:
+        if st.button(PLATFORMS[key]["label"], key=f"platform_btn_{key}", use_container_width=True):
+            st.session_state.platform = key
+            st.rerun()
+ 
+ 
+def section_toggle(key_prefix, options):
+    state_key = f"{key_prefix}_section"
+    if state_key not in st.session_state:
+        st.session_state[state_key] = options[0]
+    btn_cols = st.columns(len(options))
+    for c, opt in zip(btn_cols, options):
+        with c:
+            btn_type = "primary" if opt == st.session_state[state_key] else "secondary"
+            if st.button(opt, key=f"{key_prefix}_btn_{opt}", use_container_width=True, type=btn_type):
+                st.session_state[state_key] = opt
+                st.rerun()
+    return st.session_state[state_key]
+ 
+ 
+if current_platform == "shopee":
+    section = section_toggle("shopee", ["รายรับ", "ค่าใช้จ่าย (Shopee/SPX)"])
+    _ = render_shopee_income() if section == "รายรับ" else render_shopee_expense()
+elif current_platform == "lazada":
+    section = section_toggle("lazada", ["รายรับ", "ค่าใช้จ่าย"])
+    _ = render_lazada_income() if section == "รายรับ" else render_lazada_expense()
+else:
+    _ = render_tiktok_expense()
