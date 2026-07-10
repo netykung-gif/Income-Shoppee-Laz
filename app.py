@@ -591,88 +591,63 @@ if "platform" not in st.session_state:
 
 current_platform = st.session_state.platform
 
-# --- 3. CSS สไตล์ Pinterest Card (แก้คำว่า unsafe_allow_html ให้แล้ว) ---
+# --- 3. CSS สไตล์ Pinterest (ล็อกเป้าเฉพาะ 3 ปุ่มบนเท่านั้น ไม่กวนปุ่มอื่น!) ---
+# ใช้ nth-of-type(1) เพื่อบอกว่า "เปลี่ยนแค่แถวแรกสุดนะ แถวอื่นอย่าไปยุ่ง"
 st.markdown("""
 <style>
-    /* แต่งปุ่มหลักให้กลายเป็น Card สไตล์ Pinterest (ขอบมน, มีเงา, สูง) */
-    div[data-testid="column"] div[data-testid="stButton"] > button {
-        height: 130px; 
-        border-radius: 20px; 
-        background-color: #ffffff;
-        border: 2px solid #f0f0f0;
-        transition: all 0.2s ease-in-out;
-        font-size: 24px !important; 
-        font-weight: bold;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-        color: #555555;
+    /* สไตล์ Card พื้นฐานสำหรับ 3 ปุ่มบน */
+    div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:nth-of-type(1) button {
+        height: 120px !important; 
+        border-radius: 16px !important; 
+        background-color: #ffffff !important;
+        border: 2px solid #f0f0f0 !important;
+        transition: all 0.2s ease-in-out !important;
+        font-size: 22px !important; 
+        font-weight: bold !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.04) !important;
+        color: #555555 !important;
     }
     
-    /* เอฟเฟกต์ตอนเอาเมาส์ชี้ (Hover) จะยกลอยขึ้นแบบ Pinterest */
-    div[data-testid="column"] div[data-testid="stButton"] > button:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 14px 24px rgba(0,0,0,0.1);
-        border-color: #d5d5d5;
-    }
-    
-    /* เอาขอบสีแดงมาตรฐานของ Streamlit ออกเวลากด */
-    div[data-testid="column"] div[data-testid="stButton"] > button:focus:not(:active) {
-        border-color: inherit;
-        color: inherit;
+    /* เอฟเฟกต์เด้งตอนเอาเมาส์ชี้ */
+    div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:nth-of-type(1) button:hover {
+        transform: translateY(-5px) !important;
+        box-shadow: 0 12px 20px rgba(0,0,0,0.08) !important;
+        border-color: #d5d5d5 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. CSS แยกสีไฮไลท์ตาม Platform ที่ถูกเลือกอยู่ (Active State) ---
+# --- 4. CSS ไฮไลท์สีตาม Platform ที่เลือกอยู่ (Active State) ---
 if current_platform == "shopee":
-    st.markdown("""
-    <style>
-    div[data-testid="column"]:nth-child(1) div[data-testid="stButton"] > button {
-        border-color: #EE4D2D !important; 
-        background-color: #FDEEEA !important; 
-        color: #EE4D2D !important;
-        box-shadow: 0 8px 20px rgba(238, 77, 45, 0.15);
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    active_idx, active_color, active_bg = 1, "#EE4D2D", "#FDEEEA"
 elif current_platform == "lazada":
-    st.markdown("""
-    <style>
-    div[data-testid="column"]:nth-child(2) div[data-testid="stButton"] > button {
-        border-color: #1B1F8A !important; 
-        background-color: #ECEDF7 !important; 
-        color: #1B1F8A !important;
-        box-shadow: 0 8px 20px rgba(27, 31, 138, 0.15);
-    }
-    </style>
-    """, unsafe_allow_html=True)
-elif current_platform == "tiktok":
-    st.markdown("""
-    <style>
-    div[data-testid="column"]:nth-child(3) div[data-testid="stButton"] > button {
-        border-color: #111111 !important; 
-        background-color: #F5F5F5 !important; 
-        color: #111111 !important;
-        box-shadow: 0 8px 20px rgba(17, 17, 17, 0.15);
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    active_idx, active_color, active_bg = 2, "#1B1F8A", "#ECEDF7"
+else:
+    active_idx, active_color, active_bg = 3, "#111111", "#F5F5F5"
 
+st.markdown(f"""
+<style>
+    div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"]:nth-of-type(1) div[data-testid="column"]:nth-child({active_idx}) button {{
+        border-color: {active_color} !important; 
+        background-color: {active_bg} !important; 
+        color: {active_color} !important;
+        box-shadow: 0 8px 15px {active_color}33 !important;
+    }}
+</style>
+""", unsafe_allow_html=True)
 
 st.title("📊 โปรแกรมสรุปรายได้ / ค่าใช้จ่าย")
 
-# --- 5. วางปุ่ม (ระบบ CSS ด้านบนจะมาครอบให้กลายเป็น Card อัตโนมัติ) ---
+# --- 5. วางปุ่ม Platform 3 ปุ่ม (จะถูกครอบด้วย CSS ด้านบนอัตโนมัติ) ---
 cols = st.columns(3)
-
 with cols[0]:
     if st.button("🛍️ Shopee", use_container_width=True):
         st.session_state.platform = "shopee"
         st.rerun()
-
 with cols[1]:
     if st.button("❤️ Lazada", use_container_width=True):
         st.session_state.platform = "lazada"
         st.rerun()
-
 with cols[2]:
     if st.button("🎵 TikTok", use_container_width=True):
         st.session_state.platform = "tiktok"
@@ -680,8 +655,7 @@ with cols[2]:
 
 st.divider()
 
-# --- 6. ฟังก์ชันการทำงาน (คงไว้เหมือนที่คุณเขียนเป๊ะๆ) ---
-
+# --- 6. ฟังก์ชันการดึงข้อมูล (โค้ดเดิมของคุณ) ---
 def render_shopee_income():
     st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
     uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"], key="shopee_uploader")
@@ -739,7 +713,7 @@ def render_tiktok_expense():
         st.success(f"ดึงข้อมูลสำเร็จ {len(df_ttk_exp)} รายการ")
         st.dataframe(df_ttk_exp)
 
-# --- 7. UI เลือกระหว่าง รายรับ / ค่าใช้จ่าย ---
+# --- 7. ฟังก์ชันปุ่มเลือก รายรับ/รายจ่าย (อันนี้ทำงานได้ปกติแล้ว เพราะเราไม่เอา CSS ไปกวนมัน) ---
 def section_toggle(key_prefix, options):
     state_key = f"{key_prefix}_section"
     if state_key not in st.session_state:
@@ -754,6 +728,7 @@ def section_toggle(key_prefix, options):
                 st.rerun()
     return st.session_state[state_key]
 
+# --- 8. แสดงผลเนื้อหา ---
 st.subheader(f"จัดการข้อมูล: {current_platform.capitalize()}")
 
 if current_platform == "shopee":
