@@ -591,96 +591,99 @@ if "platform" not in st.session_state:
 
 current_platform = st.session_state.platform
 
-# --- 3. 🎨 ทลายขีดจำกัด Streamlit: แปลงปุ่มให้เป็นการ์ด Pinterest ---
+# --- 3. 🎨 CSS สไตล์ Pinterest Card (แยกปุ่มที่เลือกกับไม่เลือกผ่านเดสทอปคลาส) ---
 st.markdown("""
 <style>
-    /* ล็อกเป้าเฉพาะ 3 ปุ่มบน (แพลตฟอร์ม) ให้กลายเป็น Card แนวตั้ง */
+    /* 🛠️ สไตล์พื้นฐานของทุกปุ่มในแถวแพลตฟอร์ม */
     div[data-testid="stHorizontalBlock"]:first-of-type button {
-        height: 180px !important; /* ความสูงของการ์ด */
-        border-radius: 24px !important; /* ขอบมนกริบแบบ Pinterest */
-        background-color: #ffffff !important;
-        border: none !important;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.06) !important; /* เงาฟุ้งๆ ดูแพง */
-        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important; /* เด้งสมูทตอนเอาเมาส์ชี้ */
-    }
-    
-    /* เอฟเฟกต์ตอนชี้เมาส์ (Hover): การ์ดลอยขึ้นและเงาเข้มขึ้น */
-    div[data-testid="stHorizontalBlock"]:first-of-type button:hover {
-        transform: translateY(-12px) !important; 
-        box-shadow: 0 16px 32px rgba(0,0,0,0.12) !important;
-    }
-
-    /* จัดระเบียบตัวหนังสือและไอคอนในการ์ด */
-    div[data-testid="stHorizontalBlock"]:first-of-type button p {
-        font-size: 26px !important; /* ขยายฟอนต์ให้ใหญ่ตูม */
+        height: 180px !important; 
+        border-radius: 24px !important; 
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+        font-size: 26px !important; 
         font-weight: 800 !important;
-        color: #444 !important;
-        white-space: pre-line !important; /* อนุญาตให้ขึ้นบรรทัดใหม่ได้ */
+        white-space: pre-line !important;
         line-height: 1.3 !important;
     }
     
-    /* ซ่อนกรอบสีแดงตอนคลิกปุ่ม */
-    div[data-testid="stHorizontalBlock"]:first-of-type button:focus:not(:active) {
-        color: inherit;
+    /* เอฟเฟกต์ยกตัวลอยตอนเอาเมาส์ชี้ */
+    div[data-testid="stHorizontalBlock"]:first-of-type button:hover {
+        transform: translateY(-10px) !important;
+    }
+
+    /* ⚪ สไตล์สำหรับการ์ดที่ "ไม่ได้เลือก" (Secondary Button) */
+    div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-secondary"] {
+        background-color: #ffffff !important;
+        border: 2px solid #f0f0f0 !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.05) !important;
+    }
+    div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-secondary"] p {
+        color: #555555 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-secondary"]:hover {
+        box-shadow: 0 16px 32px rgba(0,0,0,0.12) !important;
+        border-color: #d5d5d5 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. 🎨 ใส่สีแพลตฟอร์มให้การ์ดที่ถูกเลือกอยู่ (Active State) ---
+# --- 4. 🎨 CSS ไฮไลท์การ์ดที่ "ถูกเลือกอยู่" (Primary Button) ตามแบรนด์ ---
 if current_platform == "shopee":
     st.markdown("""
     <style>
-    div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-child(1) button {
+    div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-primary"] {
         background: linear-gradient(135deg, #ff7315, #EE4D2D) !important; /* ไล่สีส้ม Shopee */
-        box-shadow: 0 12px 28px rgba(238, 77, 45, 0.35) !important;
+        box-shadow: 0 12px 28px rgba(238, 77, 45, 0.4) !important;
+        border: none !important;
     }
-    div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-child(1) button p { color: #ffffff !important; }
+    div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-primary"] p { color: #ffffff !important; }
     </style>
     """, unsafe_allow_html=True)
 
 elif current_platform == "lazada":
     st.markdown("""
     <style>
-    div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-child(2) button {
+    div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-primary"] {
         background: linear-gradient(135deg, #2a2dbb, #1B1F8A) !important; /* ไล่สีน้ำเงิน Lazada */
-        box-shadow: 0 12px 28px rgba(27, 31, 138, 0.35) !important;
+        box-shadow: 0 12px 28px rgba(27, 31, 138, 0.4) !important;
+        border: none !important;
     }
-    div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-child(2) button p { color: #ffffff !important; }
+    div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-primary"] p { color: #ffffff !important; }
     </style>
     """, unsafe_allow_html=True)
 
 elif current_platform == "tiktok":
     st.markdown("""
     <style>
-    div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-child(3) button {
-        background: linear-gradient(135deg, #333333, #000000) !important; /* ไล่สีดำ TikTok */
-        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35) !important;
+    div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-primary"] {
+        background: linear-gradient(135deg, #444444, #000000) !important; /* ไล่สีดำ TikTok */
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4) !important;
+        border: none !important;
     }
-    div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="column"]:nth-child(3) button p { color: #ffffff !important; }
+    div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-primary"] p { color: #ffffff !important; }
     </style>
     """, unsafe_allow_html=True)
 
 
 st.title("📊 โปรแกรมสรุปรายได้ / ค่าใช้จ่าย")
 
-# --- 5. สร้างการ์ด (ใส่ \n เพื่อดันให้ตัวหนังสือลงมาอยู่ใต้ไอคอนแบบ Pinterest) ---
+# --- 5. วางการ์ดปุ่มควบคุม (ใช้ระบบสลับ type=primary/secondary เพื่อทำไฮไลท์สี) ---
 cols = st.columns(3)
 with cols[0]:
-    if st.button("🛍️\nShopee", use_container_width=True):
+    if st.button("🛍️\nShopee", use_container_width=True, type="primary" if current_platform == "shopee" else "secondary"):
         st.session_state.platform = "shopee"
         st.rerun()
 with cols[1]:
-    if st.button("❤️\nLazada", use_container_width=True):
+    if st.button("❤️\nLazada", use_container_width=True, type="primary" if current_platform == "lazada" else "secondary"):
         st.session_state.platform = "lazada"
         st.rerun()
 with cols[2]:
-    if st.button("🎵\nTikTok", use_container_width=True):
+    if st.button("🎵\nTikTok", use_container_width=True, type="primary" if current_platform == "tiktok" else "secondary"):
         st.session_state.platform = "tiktok"
         st.rerun()
 
 st.divider()
 
-# --- 6. ฟังก์ชันการทำงาน (ไม่ต้องแก้ ปลอดภัย 100%) ---
+# --- 6. ฟังก์ชันการทำงานดึงข้อมูล (โค้ดเดิมของคุณ) ---
 def render_shopee_income():
     st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
     uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"], key="shopee_uploader")
@@ -738,7 +741,7 @@ def render_tiktok_expense():
         st.success(f"ดึงข้อมูลสำเร็จ {len(df_ttk_exp)} รายการ")
         st.dataframe(df_ttk_exp)
 
-# --- 7. ปุ่มสลับ รายรับ/รายจ่าย ด้านล่าง (ทำงานปกติ) ---
+# --- 7. ปุ่มสลับ รายรับ/รายจ่าย ด้านล่าง ---
 def section_toggle(key_prefix, options):
     state_key = f"{key_prefix}_section"
     if state_key not in st.session_state:
@@ -753,6 +756,7 @@ def section_toggle(key_prefix, options):
                 st.rerun()
     return st.session_state[state_key]
 
+# --- 8. ประมวลผลหน้าเพจ ---
 st.subheader(f"จัดการข้อมูล: {current_platform.capitalize()}")
 
 if current_platform == "shopee":
