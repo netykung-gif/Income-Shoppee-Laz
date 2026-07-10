@@ -587,25 +587,36 @@ st.set_page_config(page_title="สรุปรายได้/ค่าใช้
 
 st.title("📊 โปรแกรมสรุปรายได้ / ค่าใช้จ่าย")
 
-# --- โซนส่วนตัวแปรและสถานะ ---
+# --- โซนเก็บสถานะ ---
 if "platform" not in st.session_state:
     st.session_state.platform = "shopee"
 
-# --- แผงปุ่มเลือก (ใช้แบบที่คุ้นเคยแต่ลดความเสี่ยง Error CSS) ---
-col1, col2, col3 = st.columns(3)
-with col1:
-    if st.button("🛍️ Shopee", use_container_width=True): st.session_state.platform = "shopee"
-with col2:
-    if st.button("❤️ Lazada", use_container_width=True): st.session_state.platform = "lazada"
-with col3:
-    if st.button("🎵 TikTok", use_container_width=True): st.session_state.platform = "tiktok"
+# --- ส่วนเลือก Platform (เน้นสถานะ Active) ---
+# สร้างปุ่มที่เปลี่ยนสีตามสถานะที่เลือก
+cols = st.columns(3)
+platforms = [
+    {"key": "shopee", "label": "🛍️ Shopee"},
+    {"key": "lazada", "label": "❤️ Lazada"},
+    {"key": "tiktok", "label": "🎵 TikTok"}
+]
+
+for i, p in enumerate(platforms):
+    with cols[i]:
+        # ถ้าปุ่มที่กดตรงกับ session_state ให้ใช้ type="primary" เพื่อให้สีเด่นชัด
+        is_active = st.session_state.platform == p["key"]
+        if st.button(p["label"], use_container_width=True, type="primary" if is_active else "secondary"):
+            st.session_state.platform = p["key"]
+            st.rerun()
 
 st.divider()
 
-# --- ส่วน Logic หลัก ---
+# --- ฟังก์ชันเลือกหมวดหมู่ย่อย (รายรับ/รายจ่าย) ---
 def section_toggle(key_prefix, options):
     state_key = f"{key_prefix}_section"
     if state_key not in st.session_state: st.session_state[state_key] = options[0]
+    
+    # แสดงหัวข้อหมวดหมู่
+    st.subheader(f"จัดการข้อมูล: {st.session_state.platform.capitalize()}")
     
     cols = st.columns(len(options))
     for i, opt in enumerate(options):
@@ -615,16 +626,18 @@ def section_toggle(key_prefix, options):
                 st.rerun()
     return st.session_state[state_key]
 
-# --- การทำงานหลักตาม Platform ---
-if st.session_state.platform == "shopee":
+# --- Logic การแสดงผล ---
+platform = st.session_state.platform
+
+if platform == "shopee":
     section = section_toggle("shopee", ["รายรับ", "ค่าใช้จ่าย (Shopee/SPX)"])
     if section == "รายรับ": render_shopee_income()
     else: render_shopee_expense()
 
-elif st.session_state.platform == "lazada":
+elif platform == "lazada":
     section = section_toggle("lazada", ["รายรับ", "ค่าใช้จ่าย"])
     if section == "รายรับ": render_lazada_income()
     else: render_lazada_expense()
 
-elif st.session_state.platform == "tiktok":
+elif platform == "tiktok":
     render_tiktok_expense()
