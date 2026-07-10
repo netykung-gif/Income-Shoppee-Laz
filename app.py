@@ -753,9 +753,9 @@ st.markdown(panels_html, unsafe_allow_html=True)
 
 if current_platform == "shopee":
     section = st.radio("เลือกประเภทข้อมูล", ["รายรับ", "ค่าใช้จ่าย (Shopee/SPX)"], horizontal=True, key="shopee_section")
-    render_shopee_income() if section == "รายรับ" else render_shopee_expense()
+    _ = render_shopee_income() if section == "รายรับ" else render_shopee_expense()
 elif current_platform == "lazada":
     section = st.radio("เลือกประเภทข้อมูล", ["รายรับ", "ค่าใช้จ่าย"], horizontal=True, key="lazada_section")
-    render_lazada_income() if section == "รายรับ" else render_lazada_expense()
+    _ = render_lazada_income() if section == "รายรับ" else render_lazada_expense()
 else:
-    render_tiktok_expense()
+    _ = render_tiktok_expense()
