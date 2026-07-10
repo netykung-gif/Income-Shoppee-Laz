@@ -734,7 +734,7 @@ current_platform = st.session_state.platform
 
 theme_css = "<style>"
 theme_css += (
-    "div[data-testid='stHorizontalBlock'] button{height:300px; border-radius:12px; "
+    "div[data-testid='stHorizontalBlock'] button{height:600px; border-radius:100px; "
     "font-size:32px; font-weight:600; color:#222 !important; border-width:0 0 3px 0 !important; "
     "border-style:solid !important; transition:transform .15s ease, box-shadow .15s ease;}"
     "div[data-testid='stHorizontalBlock'] button:hover{transform:translateY(-3px); "
