@@ -602,6 +602,137 @@ with cols[2]:
 # --- 2. Logic การเลือก (วางแทนที่แผงปุ่มเดิม) ---
 st.title("📊 สรุปรายได้ / ค่าใช้จ่าย")
 
+def render_shopee_income():
+    st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
+    uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"], key="shopee_uploader")
+    if uploaded_file is None:
+        return
+    with st.spinner("กำลังอ่านไฟล์..."):
+        df, warnings = get_shopee_data(uploaded_file)
+    if df.empty:
+        st.error(
+            "ไม่สามารถดึงข้อมูลจากไฟล์นี้ได้ กรุณาตรวจสอบว่าเป็นไฟล์รายงานการเงิน Shopee "
+            "ที่มีตาราง 'รายละเอียดการโอนเงิน' หรือไม่"
+        )
+        return
+    df["ยอดสุทธิ"] = (df["ราคาสินค้า"] - df["ยอดคืนเงิน"].abs()) + df["เงินสนับสนุน"]
+    for w in warnings:
+        st.warning(w)
+    if not warnings:
+        st.success(f"ดึงข้อมูลสำเร็จ {len(df)} แถว และผลรวมตรงกับยอดสรุปในรายงาน ✅")
+    st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+    st.dataframe(df)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Shopee")
+    st.download_button(
+        label="📥 ดาวน์โหลดไฟล์ Excel", data=output.getvalue(),
+        file_name="สรุปรายได้_Shopee.xlsx", mime="application/vnd.ms-excel", key="shopee_download",
+    )
+ 
+ 
+def render_lazada_income():
+    st.write("อัปโหลดไฟล์ PDF รายงาน Lazada เพื่อดึงวันที่และยอดรายการขาย")
+    uploaded_file_lzd = st.file_uploader("เลือกไฟล์ PDF ของ Lazada", type=["pdf"], key="lazada_uploader")
+    if uploaded_file_lzd is None:
+        return
+    with st.spinner("กำลังอ่านไฟล์..."):
+        df_lzd, warnings_lzd = get_lazada_data(uploaded_file_lzd)
+    if df_lzd.empty:
+        st.error(
+            "ไม่สามารถดึงข้อมูลจากไฟล์นี้ได้ กรุณาตรวจสอบว่าเป็นไฟล์รายงานการเงิน Lazada "
+            "ที่มีตาราง 'รายละเอียดธุรกรรม' หรือไม่"
+        )
+        return
+    for w in warnings_lzd:
+        st.warning(w)
+    if not warnings_lzd:
+        st.success(f"ดึงข้อมูลสำเร็จ {len(df_lzd)} แถว และผลรวมตรงกับยอดสรุปในรายงาน ✅")
+    st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+    st.dataframe(df_lzd)
+    output_lzd = io.BytesIO()
+    with pd.ExcelWriter(output_lzd, engine="xlsxwriter") as writer:
+        df_lzd.to_excel(writer, index=False, sheet_name="Lazada")
+    st.download_button(
+        label="📥 ดาวน์โหลดไฟล์ Excel", data=output_lzd.getvalue(),
+        file_name="สรุปรายได้_Lazada.xlsx", mime="application/vnd.ms-excel", key="lazada_download",
+    )
+ 
+ 
+def render_lazada_expense():
+    st.write("อัปโหลดไฟล์ PDF ใบเสร็จ/ใบกำกับภาษี/Credit Note ค่าใช้จ่ายของ Lazada (อัปโหลดได้หลายไฟล์ แต่ละหน้าถือเป็น 1 เอกสาร)")
+    files_lzd_exp = st.file_uploader(
+        "เลือกไฟล์ PDF ค่าใช้จ่าย Lazada", type=["pdf"], accept_multiple_files=True, key="lzd_exp_uploader"
+    )
+    if not files_lzd_exp:
+        return
+    with st.spinner("กำลังอ่านไฟล์..."):
+        df_lzd_exp = get_lazada_expenses_data(files_lzd_exp)
+    if df_lzd_exp.empty:
+        st.error("ไม่สามารถดึงข้อมูลจากไฟล์ที่อัปโหลดได้")
+        return
+    st.success(f"ดึงข้อมูลสำเร็จ {len(df_lzd_exp)} รายการ")
+    st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+    st.dataframe(df_lzd_exp)
+    output_lzd_exp = io.BytesIO()
+    with pd.ExcelWriter(output_lzd_exp, engine="xlsxwriter") as writer:
+        df_lzd_exp.to_excel(writer, index=False, sheet_name="Lazada Expenses")
+    st.download_button(
+        label="📥 ดาวน์โหลดไฟล์ Excel", data=output_lzd_exp.getvalue(),
+        file_name="ค่าใช้จ่าย_Lazada.xlsx", mime="application/vnd.ms-excel", key="lzd_exp_download",
+    )
+ 
+ 
+def render_shopee_expense():
+    st.write("อัปโหลดไฟล์ PDF ใบเสร็จ/ใบกำกับภาษีค่าใช้จ่ายของ Shopee/SPX Express (อัปโหลดได้หลายไฟล์ แต่ละหน้าถือเป็น 1 เอกสาร)")
+    files_shp_exp = st.file_uploader(
+        "เลือกไฟล์ PDF ค่าใช้จ่าย Shopee/SPX", type=["pdf"], accept_multiple_files=True, key="shp_exp_uploader"
+    )
+    if not files_shp_exp:
+        return
+    with st.spinner("กำลังอ่านไฟล์..."):
+        df_shp_exp = get_shopee_expenses_data(files_shp_exp)
+    if df_shp_exp.empty:
+        st.error("ไม่สามารถดึงข้อมูลจากไฟล์ที่อัปโหลดได้")
+        return
+    st.success(f"ดึงข้อมูลสำเร็จ {len(df_shp_exp)} รายการ")
+    st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+    st.dataframe(df_shp_exp)
+    output_shp_exp = io.BytesIO()
+    with pd.ExcelWriter(output_shp_exp, engine="xlsxwriter") as writer:
+        df_shp_exp.to_excel(writer, index=False, sheet_name="Shopee_SPX Expenses")
+    st.download_button(
+        label="📥 ดาวน์โหลดไฟล์ Excel", data=output_shp_exp.getvalue(),
+        file_name="ค่าใช้จ่าย_Shopee_SPX.xlsx", mime="application/vnd.ms-excel", key="shp_exp_download",
+    )
+ 
+ 
+def render_tiktok_expense():
+    st.write(
+        "อัปโหลดไฟล์ PDF ใบเสร็จ/ใบกำกับภาษีค่าใช้จ่ายฝั่ง TikTok Shop "
+        "(ค่าขนส่ง / ค่าธรรมเนียม Affiliate / ค่าคอมมิชชั่นครีเอเตอร์ ฯลฯ — อัปโหลดได้หลายไฟล์ แต่ละหน้าถือเป็น 1 เอกสาร)"
+    )
+    files_ttk_exp = st.file_uploader(
+        "เลือกไฟล์ PDF ค่าใช้จ่าย TikTok", type=["pdf"], accept_multiple_files=True, key="ttk_exp_uploader"
+    )
+    if not files_ttk_exp:
+        return
+    with st.spinner("กำลังอ่านไฟล์..."):
+        df_ttk_exp = get_tiktok_expenses_data(files_ttk_exp)
+    if df_ttk_exp.empty:
+        st.error("ไม่สามารถดึงข้อมูลจากไฟล์ที่อัปโหลดได้")
+        return
+    st.success(f"ดึงข้อมูลสำเร็จ {len(df_ttk_exp)} รายการ")
+    st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+    st.dataframe(df_ttk_exp)
+    output_ttk_exp = io.BytesIO()
+    with pd.ExcelWriter(output_ttk_exp, engine="xlsxwriter") as writer:
+        df_ttk_exp.to_excel(writer, index=False, sheet_name="TikTok Expenses")
+    st.download_button(
+        label="📥 ดาวน์โหลดไฟล์ Excel", data=output_ttk_exp.getvalue(),
+        file_name="ค่าใช้จ่าย_TikTok.xlsx", mime="application/vnd.ms-excel", key="ttk_exp_download",
+    )
+
 # ดึงค่าปัจจุบันมาเช็ค (ถ้าไม่มีให้เป็น 'shopee')
 if "platform" not in st.session_state:
     st.session_state.platform = "shopee"
