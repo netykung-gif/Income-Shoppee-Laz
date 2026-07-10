@@ -591,7 +591,7 @@ if "platform" not in st.session_state:
 
 current_platform = st.session_state.platform
 
-# --- 3. 🎨 CSS สไตล์ Pinterest Card (แยกปุ่มที่เลือกกับไม่เลือกผ่านเดสทอปคลาส) ---
+# --- 3. 🎨 CSS สไตล์ Pinterest Card ---
 st.markdown("""
 <style>
     /* 🛠️ สไตล์พื้นฐานของทุกปุ่มในแถวแพลตฟอร์ม */
@@ -610,7 +610,7 @@ st.markdown("""
         transform: translateY(-10px) !important;
     }
 
-    /* ⚪ สไตล์สำหรับการ์ดที่ "ไม่ได้เลือก" (Secondary Button) */
+    /* ⚪ สไตล์สำหรับการ์ดที่ "ไม่ได้เลือก" */
     div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-secondary"] {
         background-color: #ffffff !important;
         border: 2px solid #f0f0f0 !important;
@@ -626,36 +626,34 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. 🎨 CSS ไฮไลท์การ์ดที่ "ถูกเลือกอยู่" (Primary Button) ตามแบรนด์ ---
+# --- 4. 🎨 CSS ไฮไลท์การ์ดที่ "ถูกเลือกอยู่" ---
 if current_platform == "shopee":
     st.markdown("""
     <style>
     div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-primary"] {
-        background: linear-gradient(135deg, #ff7315, #EE4D2D) !important; /* ไล่สีส้ม Shopee */
+        background: linear-gradient(135deg, #ff7315, #EE4D2D) !important; 
         box-shadow: 0 12px 28px rgba(238, 77, 45, 0.4) !important;
         border: none !important;
     }
     div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-primary"] p { color: #ffffff !important; }
     </style>
     """, unsafe_allow_html=True)
-
 elif current_platform == "lazada":
     st.markdown("""
     <style>
     div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-primary"] {
-        background: linear-gradient(135deg, #2a2dbb, #1B1F8A) !important; /* ไล่สีน้ำเงิน Lazada */
+        background: linear-gradient(135deg, #2a2dbb, #1B1F8A) !important; 
         box-shadow: 0 12px 28px rgba(27, 31, 138, 0.4) !important;
         border: none !important;
     }
     div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-primary"] p { color: #ffffff !important; }
     </style>
     """, unsafe_allow_html=True)
-
 elif current_platform == "tiktok":
     st.markdown("""
     <style>
     div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-primary"] {
-        background: linear-gradient(135deg, #444444, #000000) !important; /* ไล่สีดำ TikTok */
+        background: linear-gradient(135deg, #444444, #000000) !important; 
         box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4) !important;
         border: none !important;
     }
@@ -663,10 +661,9 @@ elif current_platform == "tiktok":
     </style>
     """, unsafe_allow_html=True)
 
-
 st.title("📊 โปรแกรมสรุปรายได้ / ค่าใช้จ่าย")
 
-# --- 5. วางการ์ดปุ่มควบคุม (ใช้ระบบสลับ type=primary/secondary เพื่อทำไฮไลท์สี) ---
+# --- 5. วางการ์ดปุ่มควบคุม ---
 cols = st.columns(3)
 with cols[0]:
     if st.button("🛍️\nShopee", use_container_width=True, type="primary" if current_platform == "shopee" else "secondary"):
@@ -683,7 +680,7 @@ with cols[2]:
 
 st.divider()
 
-# --- 6. ฟังก์ชันการทำงานดึงข้อมูล (โค้ดเดิมของคุณ) ---
+# --- 6. ฟังก์ชันการทำงาน (เพิ่มปุ่มดาวน์โหลดกลับมาแล้ว 📥) ---
 def render_shopee_income():
     st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
     uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"], key="shopee_uploader")
@@ -697,6 +694,10 @@ def render_shopee_income():
     for w in warnings: st.warning(w)
     if not warnings: st.success(f"ดึงข้อมูลสำเร็จ {len(df)} แถว ✅")
     st.dataframe(df)
+    
+    # ปุ่มดาวน์โหลด
+    csv = df.to_csv(index=False).encode('utf-8-sig')
+    st.download_button(label="📥 ดาวน์โหลดไฟล์ CSV", data=csv, file_name="shopee_income.csv", mime="text/csv", key="dl_shopee_inc")
 
 def render_lazada_income():
     st.write("อัปโหลดไฟล์ PDF รายงาน Lazada เพื่อดึงวันที่และยอดรายการขาย")
@@ -711,6 +712,10 @@ def render_lazada_income():
     if not warnings_lzd: st.success(f"ดึงข้อมูลสำเร็จ {len(df_lzd)} แถว ✅")
     st.dataframe(df_lzd)
 
+    # ปุ่มดาวน์โหลด
+    csv = df_lzd.to_csv(index=False).encode('utf-8-sig')
+    st.download_button(label="📥 ดาวน์โหลดไฟล์ CSV", data=csv, file_name="lazada_income.csv", mime="text/csv", key="dl_lazada_inc")
+
 def render_lazada_expense():
     st.write("อัปโหลดไฟล์ PDF ค่าใช้จ่าย Lazada")
     files_lzd_exp = st.file_uploader("เลือกไฟล์ PDF ค่าใช้จ่าย Lazada", type=["pdf"], accept_multiple_files=True, key="lzd_exp_uploader")
@@ -720,6 +725,10 @@ def render_lazada_expense():
     if not df_lzd_exp.empty:
         st.success(f"ดึงข้อมูลสำเร็จ {len(df_lzd_exp)} รายการ")
         st.dataframe(df_lzd_exp)
+        
+        # ปุ่มดาวน์โหลด
+        csv = df_lzd_exp.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(label="📥 ดาวน์โหลดไฟล์ CSV", data=csv, file_name="lazada_expense.csv", mime="text/csv", key="dl_lazada_exp")
 
 def render_shopee_expense():
     st.write("อัปโหลดไฟล์ PDF ค่าใช้จ่าย Shopee/SPX")
@@ -730,6 +739,10 @@ def render_shopee_expense():
     if not df_shp_exp.empty:
         st.success(f"ดึงข้อมูลสำเร็จ {len(df_shp_exp)} รายการ")
         st.dataframe(df_shp_exp)
+        
+        # ปุ่มดาวน์โหลด
+        csv = df_shp_exp.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(label="📥 ดาวน์โหลดไฟล์ CSV", data=csv, file_name="shopee_expense.csv", mime="text/csv", key="dl_shopee_exp")
 
 def render_tiktok_expense():
     st.write("อัปโหลดไฟล์ PDF ค่าใช้จ่าย TikTok Shop")
@@ -740,6 +753,10 @@ def render_tiktok_expense():
     if not df_ttk_exp.empty:
         st.success(f"ดึงข้อมูลสำเร็จ {len(df_ttk_exp)} รายการ")
         st.dataframe(df_ttk_exp)
+        
+        # ปุ่มดาวน์โหลด
+        csv = df_ttk_exp.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(label="📥 ดาวน์โหลดไฟล์ CSV", data=csv, file_name="tiktok_expense.csv", mime="text/csv", key="dl_tiktok_exp")
 
 # --- 7. ปุ่มสลับ รายรับ/รายจ่าย ด้านล่าง ---
 def section_toggle(key_prefix, options):
