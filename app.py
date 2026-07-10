@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 import pdfplumber
 import re
@@ -721,38 +720,43 @@ def render_tiktok_expense():
     )
 
 
-# --- แผงเลือกแพลตฟอร์ม: hover ขยาย สีตามธีมแบรนด์ (มินิมอล มีพื้นสีอ่อนๆ เข้าธีม) ---
+# --- แผงเลือกแพลตฟอร์ม: ปุ่ม Streamlit จริง (คลิกได้ชัวร์ 100%) แต่งสีตามธีมแบรนด์ + ยกตัวตอน hover ---
 PLATFORMS = {
-    "shopee": {"label": "Shopee", "color": "#EE4D2D", "tint": "#FDEEEA", "icon": "ti-shopping-bag"},
-    "lazada": {"label": "Lazada", "color": "#1B1F8A", "tint": "#ECEDF7", "icon": "ti-heart"},
-    "tiktok": {"label": "TikTok", "color": "#111111", "tint": "#FBEAF0", "icon": "ti-brand-tiktok"},
+    "shopee": {"label": "🛍️ Shopee", "color": "#EE4D2D", "tint": "#FDEEEA"},
+    "lazada": {"label": "❤️ Lazada", "color": "#1B1F8A", "tint": "#ECEDF7"},
+    "tiktok": {"label": "🎵 TikTok", "color": "#111111", "tint": "#FBEAF0"},
 }
+PLATFORM_KEYS = list(PLATFORMS.keys())
 
-current_platform = st.query_params.get("platform", "shopee")
-if current_platform not in PLATFORMS:
-    current_platform = "shopee"
+if "platform" not in st.session_state:
+    st.session_state.platform = "shopee"
+current_platform = st.session_state.platform
 
-panel_parts = [
-    '<html><head><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2/dist/tabler-icons.min.css">',
-    '<style>html,body{margin:0;padding:0;background:transparent;}</style></head><body>',
-    '<div style="display:flex; gap:6px; font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;">',
-]
-for key, p in PLATFORMS.items():
+theme_css = "<style>"
+theme_css += (
+    "div[data-testid='stHorizontalBlock'] button{height:88px; border-radius:12px; "
+    "font-size:15px; font-weight:600; color:#222 !important; border-width:0 0 3px 0 !important; "
+    "border-style:solid !important; transition:transform .15s ease, box-shadow .15s ease;}"
+    "div[data-testid='stHorizontalBlock'] button:hover{transform:translateY(-3px); "
+    "box-shadow:0 8px 16px rgba(0,0,0,.12);}"
+)
+for i, key in enumerate(PLATFORM_KEYS, start=1):
+    p = PLATFORMS[key]
     active = key == current_platform
     border = p["color"] if active else "transparent"
-    flex = 2 if active else 1
-    panel_parts.append(
-        f'<a href="?platform={key}" target="_top" style="text-decoration:none; color:inherit; flex:{flex}; transition:flex .25s ease;">'
-        f'<div onmouseover="this.style.flexGrow=2" onmouseout="this.style.flexGrow={flex}" '
-        f'style="background:{p["tint"]}; border-radius:12px; border-bottom:3px solid {border}; padding:18px 16px; cursor:pointer; height:96px; display:flex; flex-direction:column; justify-content:flex-end; box-sizing:border-box;">'
-        f'<i class="ti {p["icon"]}" style="font-size:22px; color:{p["color"]}; margin-bottom:6px;"></i>'
-        f'<div style="font-size:15px; font-weight:600; color:#222;">{p["label"]}</div>'
-        f'</div></a>'
+    theme_css += (
+        f"div[data-testid='stHorizontalBlock'] > div:nth-of-type({i}) button{{"
+        f"background:{p['tint']} !important; border-color:{border} !important;}}"
     )
-panel_parts.append("</div></body></html>")
-panels_html = "".join(panel_parts)
+theme_css += "</style>"
+st.markdown(theme_css, unsafe_allow_html=True)
 
-components.html(panels_html, height=120, scrolling=False)
+cols = st.columns(3)
+for col, key in zip(cols, PLATFORM_KEYS):
+    with col:
+        if st.button(PLATFORMS[key]["label"], key=f"platform_btn_{key}", use_container_width=True):
+            st.session_state.platform = key
+            st.rerun()
 
 if current_platform == "shopee":
     section = st.radio("เลือกประเภทข้อมูล", ["รายรับ", "ค่าใช้จ่าย (Shopee/SPX)"], horizontal=True, key="shopee_section")
