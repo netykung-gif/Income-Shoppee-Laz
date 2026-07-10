@@ -583,9 +583,9 @@ def get_tiktok_expenses_data(files):
 # ---------------------------------------------------------------------------
 # หน้าตาเว็บ
 # ---------------------------------------------------------------------------
-st.set_page_config(page_title="สรุปรายได้/ค่าใช้จ่าย", page_icon="📊", layout="wide")
+st.set_page_config(page_title="สรุปรายได้/ค่าใช้จ่าย", page_icon="📊", layout="centered")
 
-st.title("📊 โปรแกรมสรุปรายได้ / ค่าใช้จ่าย")
+st.title("สรุปรายได้ / ค่าใช้จ่าย")
 
 
 def render_shopee_income():
@@ -734,10 +734,10 @@ current_platform = st.session_state.platform
 
 theme_css = "<style>"
 theme_css += (
-    "div[data-testid='stHorizontalBlock'] button{height:88px; button{weight:80px; border-radius:12px; "
+    "div[data-testid='stHorizontalBlock'] button{height:200px; button{weight:80px; border-radius:12px; "
     "font-size:15px; font-weight:600; color:#222 !important; border-width:0 0 3px 0 !important; "
     "border-style:solid !important; transition:transform .15s ease, box-shadow .15s ease;}"
-    "div[data-testid='stHorizontalBlock'] button:hover{transform:translateY(-3px); "
+    "div[data-testid='stHorizontalBlock'] button:hover{transform:translateY(-10px); "
     "box-shadow:0 8px 16px rgba(0,0,0,.12);}"
 )
 for i, key in enumerate(PLATFORM_KEYS, start=1):
