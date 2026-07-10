@@ -583,177 +583,120 @@ def get_tiktok_expenses_data(files):
 # ---------------------------------------------------------------------------
 # หน้าตาเว็บ
 # ---------------------------------------------------------------------------
-st.title("📊 โปรแกรมสรุปรายได้")
+st.set_page_config(page_title="สรุปรายได้/ค่าใช้จ่าย", page_icon="📊", layout="wide")
 
-tab_shopee, tab_lazada, tab_lzd_exp, tab_shp_exp, tab_ttk_exp = st.tabs(
-    ["Shopee (รายรับ)", "Lazada (รายรับ)", "Lazada (ค่าใช้จ่าย)", "Shopee/SPX (ค่าใช้จ่าย)", "TikTok (ค่าใช้จ่าย)"]
-)
+# --- ฟังก์ชันช่วยสร้างไฟล์ Excel ---
+def to_excel(df):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Sheet1')
+    return output.getvalue()
 
-with tab_shopee:
-    st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
+# --- 2. จัดการสถานะ Platform ---
+if "platform" not in st.session_state:
+    st.session_state.platform = "shopee"
 
-    uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"], key="shopee_uploader")
+current_platform = st.session_state.platform
 
-    if uploaded_file is not None:
-        with st.spinner("กำลังอ่านไฟล์..."):
-            df, warnings = get_shopee_data(uploaded_file)
+# --- 3. 🎨 CSS สไตล์ Pinterest Card ---
+st.markdown("""
+<style>
+    div[data-testid="stHorizontalBlock"]:first-of-type button {
+        height: 180px !important; 
+        border-radius: 24px !important; 
+        transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+        font-size: 56px !important; 
+        font-weight: 800 !important;
+        white-space: pre-line !important;
+        line-height: 1.3 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:first-of-type button:hover { transform: translateY(-10px) !important; }
+    
+    div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-secondary"] {
+        background-color: #ffffff !important;
+        border: 2px solid #f0f0f0 !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.05) !important;
+        color: #555555 !important;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-        if df.empty:
-            st.error(
-                "ไม่สามารถดึงข้อมูลจากไฟล์นี้ได้ กรุณาตรวจสอบว่าเป็นไฟล์รายงานการเงิน Shopee "
-                "ที่มีตาราง 'รายละเอียดการโอนเงิน' หรือไม่"
-            )
-        else:
-            # คำนวณสูตรใน DataFrame
-            df["ยอดสุทธิ"] = (df["ราคาสินค้า"] - df["ยอดคืนเงิน"].abs()) + df["เงินสนับสนุน"]
+# --- 4. 🎨 ไฮไลท์การ์ดตามแบรนด์ ---
+if current_platform == "shopee":
+    st.markdown("<style>div[data-testid='stHorizontalBlock']:first-of-type button[data-testid='baseButton-primary'] { background: linear-gradient(135deg, #ff7315, #EE4D2D) !important; color: white !important; }</style>", unsafe_allow_html=True)
+elif current_platform == "lazada":
+    st.markdown("<style>div[data-testid='stHorizontalBlock']:first-of-type button[data-testid='baseButton-primary'] { background: linear-gradient(135deg, #2a2dbb, #1B1F8A) !important; color: white !important; }</style>", unsafe_allow_html=True)
+elif current_platform == "tiktok":
+    st.markdown("<style>div[data-testid='stHorizontalBlock']:first-of-type button[data-testid='baseButton-primary'] { background: linear-gradient(135deg, #444444, #000000) !important; color: white !important; }</style>", unsafe_allow_html=True)
 
-            for w in warnings:
-                st.warning(w)
+st.title("📊 โปรแกรมสรุปรายได้ / ค่าใช้จ่าย")
 
-            if not warnings:
-                st.success(f"ดึงข้อมูลสำเร็จ {len(df)} แถว และผลรวมตรงกับยอดสรุปในรายงาน ✅")
+# --- 5. วางการ์ดปุ่มควบคุม ---
+cols = st.columns(3)
+with cols[0]:
+    if st.button("🛍️\nShopee", use_container_width=True, type="primary" if current_platform == "shopee" else "secondary"):
+        st.session_state.platform = "shopee"; st.rerun()
+with cols[1]:
+    if st.button("❤️\nLazada", use_container_width=True, type="primary" if current_platform == "lazada" else "secondary"):
+        st.session_state.platform = "lazada"; st.rerun()
+with cols[2]:
+    if st.button("🎵\nTikTok", use_container_width=True, type="primary" if current_platform == "tiktok" else "secondary"):
+        st.session_state.platform = "tiktok"; st.rerun()
 
-            st.write("ตัวอย่างข้อมูลที่ดึงได้:")
-            st.dataframe(df)
+st.divider()
 
-            # ปุ่มดาวน์โหลด Excel
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-                df.to_excel(writer, index=False, sheet_name="Shopee")
+# --- 6. ฟังก์ชันการทำงานและปุ่มดาวน์โหลด ---
+def render_shopee_income():
+    uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"])
+    if uploaded_file:
+        df, _ = get_shopee_data(uploaded_file)
+        df["ยอดสุทธิ"] = (df["ราคาสินค้า"] - df["ยอดคืนเงิน"].abs()) + df["เงินสนับสนุน"]
+        st.dataframe(df)
+        st.download_button("📥 ดาวน์โหลด Excel", to_excel(df), "shopee_income.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-            st.download_button(
-                label="📥 ดาวน์โหลดไฟล์ Excel",
-                data=output.getvalue(),
-                file_name="สรุปรายได้_Shopee.xlsx",
-                mime="application/vnd.ms-excel",
-                key="shopee_download",
-            )
+def render_lazada_income():
+    uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Lazada", type=["pdf"])
+    if uploaded_file:
+        df, _ = get_lazada_data(uploaded_file)
+        st.dataframe(df)
+        st.download_button("📥 ดาวน์โหลด Excel", to_excel(df), "lazada_income.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-with tab_lazada:
-    st.write("อัปโหลดไฟล์ PDF รายงาน Lazada เพื่อดึงวันที่และยอดรายการขาย")
+def render_lazada_expense():
+    files = st.file_uploader("เลือกไฟล์ PDF ค่าใช้จ่าย Lazada", type=["pdf"], accept_multiple_files=True)
+    if files:
+        df = get_lazada_expenses_data(files)
+        st.dataframe(df)
+        st.download_button("📥 ดาวน์โหลด Excel", to_excel(df), "lazada_expense.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    uploaded_file_lzd = st.file_uploader("เลือกไฟล์ PDF ของ Lazada", type=["pdf"], key="lazada_uploader")
+def render_shopee_expense():
+    files = st.file_uploader("เลือกไฟล์ PDF ค่าใช้จ่าย Shopee/SPX", type=["pdf"], accept_multiple_files=True)
+    if files:
+        df = get_shopee_expenses_data(files)
+        st.dataframe(df)
+        st.download_button("📥 ดาวน์โหลด Excel", to_excel(df), "shopee_expense.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-    if uploaded_file_lzd is not None:
-        with st.spinner("กำลังอ่านไฟล์..."):
-            df_lzd, warnings_lzd = get_lazada_data(uploaded_file_lzd)
+def render_tiktok_expense():
+    files = st.file_uploader("เลือกไฟล์ PDF ค่าใช้จ่าย TikTok Shop", type=["pdf"], accept_multiple_files=True)
+    if files:
+        df = get_tiktok_expenses_data(files)
+        st.dataframe(df)
+        st.download_button("📥 ดาวน์โหลด Excel", to_excel(df), "tiktok_expense.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-        if df_lzd.empty:
-            st.error(
-                "ไม่สามารถดึงข้อมูลจากไฟล์นี้ได้ กรุณาตรวจสอบว่าเป็นไฟล์รายงานการเงิน Lazada "
-                "ที่มีตาราง 'รายละเอียดธุรกรรม' หรือไม่"
-            )
-        else:
-            for w in warnings_lzd:
-                st.warning(w)
+# --- 7. หน้าจัดการข้อมูล ---
+def section_toggle(key, options):
+    if f"{key}_sec" not in st.session_state: st.session_state[f"{key}_sec"] = options[0]
+    cols = st.columns(len(options))
+    for i, opt in enumerate(options):
+        if cols[i].button(opt, use_container_width=True, type="primary" if st.session_state[f"{key}_sec"] == opt else "secondary"):
+            st.session_state[f"{key}_sec"] = opt; st.rerun()
+    return st.session_state[f"{key}_sec"]
 
-            if not warnings_lzd:
-                st.success(f"ดึงข้อมูลสำเร็จ {len(df_lzd)} แถว และผลรวมตรงกับยอดสรุปในรายงาน ✅")
-
-            st.write("ตัวอย่างข้อมูลที่ดึงได้:")
-            st.dataframe(df_lzd)
-
-            output_lzd = io.BytesIO()
-            with pd.ExcelWriter(output_lzd, engine="xlsxwriter") as writer:
-                df_lzd.to_excel(writer, index=False, sheet_name="Lazada")
-
-            st.download_button(
-                label="📥 ดาวน์โหลดไฟล์ Excel",
-                data=output_lzd.getvalue(),
-                file_name="สรุปรายได้_Lazada.xlsx",
-                mime="application/vnd.ms-excel",
-                key="lazada_download",
-            )
-
-with tab_lzd_exp:
-    st.write("อัปโหลดไฟล์ PDF ใบเสร็จ/ใบกำกับภาษี/Credit Note ค่าใช้จ่ายของ Lazada (อัปโหลดได้หลายไฟล์ แต่ละหน้าถือเป็น 1 เอกสาร)")
-
-    files_lzd_exp = st.file_uploader(
-        "เลือกไฟล์ PDF ค่าใช้จ่าย Lazada", type=["pdf"], accept_multiple_files=True, key="lzd_exp_uploader"
-    )
-
-    if files_lzd_exp:
-        with st.spinner("กำลังอ่านไฟล์..."):
-            df_lzd_exp = get_lazada_expenses_data(files_lzd_exp)
-
-        if df_lzd_exp.empty:
-            st.error("ไม่สามารถดึงข้อมูลจากไฟล์ที่อัปโหลดได้")
-        else:
-            st.success(f"ดึงข้อมูลสำเร็จ {len(df_lzd_exp)} รายการ")
-            st.write("ตัวอย่างข้อมูลที่ดึงได้:")
-            st.dataframe(df_lzd_exp)
-
-            output_lzd_exp = io.BytesIO()
-            with pd.ExcelWriter(output_lzd_exp, engine="xlsxwriter") as writer:
-                df_lzd_exp.to_excel(writer, index=False, sheet_name="Lazada Expenses")
-
-            st.download_button(
-                label="📥 ดาวน์โหลดไฟล์ Excel",
-                data=output_lzd_exp.getvalue(),
-                file_name="ค่าใช้จ่าย_Lazada.xlsx",
-                mime="application/vnd.ms-excel",
-                key="lzd_exp_download",
-            )
-
-with tab_shp_exp:
-    st.write("อัปโหลดไฟล์ PDF ใบเสร็จ/ใบกำกับภาษีค่าใช้จ่ายของ Shopee/SPX Express (อัปโหลดได้หลายไฟล์ แต่ละหน้าถือเป็น 1 เอกสาร)")
-
-    files_shp_exp = st.file_uploader(
-        "เลือกไฟล์ PDF ค่าใช้จ่าย Shopee/SPX", type=["pdf"], accept_multiple_files=True, key="shp_exp_uploader"
-    )
-
-    if files_shp_exp:
-        with st.spinner("กำลังอ่านไฟล์..."):
-            df_shp_exp = get_shopee_expenses_data(files_shp_exp)
-
-        if df_shp_exp.empty:
-            st.error("ไม่สามารถดึงข้อมูลจากไฟล์ที่อัปโหลดได้")
-        else:
-            st.success(f"ดึงข้อมูลสำเร็จ {len(df_shp_exp)} รายการ")
-            st.write("ตัวอย่างข้อมูลที่ดึงได้:")
-            st.dataframe(df_shp_exp)
-
-            output_shp_exp = io.BytesIO()
-            with pd.ExcelWriter(output_shp_exp, engine="xlsxwriter") as writer:
-                df_shp_exp.to_excel(writer, index=False, sheet_name="Shopee_SPX Expenses")
-
-            st.download_button(
-                label="📥 ดาวน์โหลดไฟล์ Excel",
-                data=output_shp_exp.getvalue(),
-                file_name="ค่าใช้จ่าย_Shopee_SPX.xlsx",
-                mime="application/vnd.ms-excel",
-                key="shp_exp_download",
-            )
-
-with tab_ttk_exp:
-    st.write(
-        "อัปโหลดไฟล์ PDF ใบเสร็จ/ใบกำกับภาษีค่าใช้จ่ายฝั่ง TikTok Shop "
-        "(ค่าขนส่ง / ค่าธรรมเนียม Affiliate / ค่าคอมมิชชั่นครีเอเตอร์ ฯลฯ — อัปโหลดได้หลายไฟล์ แต่ละหน้าถือเป็น 1 เอกสาร)"
-    )
-
-    files_ttk_exp = st.file_uploader(
-        "เลือกไฟล์ PDF ค่าใช้จ่าย TikTok", type=["pdf"], accept_multiple_files=True, key="ttk_exp_uploader"
-    )
-
-    if files_ttk_exp:
-        with st.spinner("กำลังอ่านไฟล์..."):
-            df_ttk_exp = get_tiktok_expenses_data(files_ttk_exp)
-
-        if df_ttk_exp.empty:
-            st.error("ไม่สามารถดึงข้อมูลจากไฟล์ที่อัปโหลดได้")
-        else:
-            st.success(f"ดึงข้อมูลสำเร็จ {len(df_ttk_exp)} รายการ")
-            st.write("ตัวอย่างข้อมูลที่ดึงได้:")
-            st.dataframe(df_ttk_exp)
-
-            output_ttk_exp = io.BytesIO()
-            with pd.ExcelWriter(output_ttk_exp, engine="xlsxwriter") as writer:
-                df_ttk_exp.to_excel(writer, index=False, sheet_name="TikTok Expenses")
-
-            st.download_button(
-                label="📥 ดาวน์โหลดไฟล์ Excel",
-                data=output_ttk_exp.getvalue(),
-                file_name="ค่าใช้จ่าย_TikTok.xlsx",
-                mime="application/vnd.ms-excel",
-                key="ttk_exp_download",
-            )
+st.subheader(f"จัดการข้อมูล: {current_platform.capitalize()}")
+if current_platform == "shopee":
+    if section_toggle("shopee", ["รายรับ", "ค่าใช้จ่าย"]) == "รายรับ": render_shopee_income()
+    else: render_shopee_expense()
+elif current_platform == "lazada":
+    if section_toggle("lazada", ["รายรับ", "ค่าใช้จ่าย"]) == "รายรับ": render_lazada_income()
+    else: render_lazada_expense()
+elif current_platform == "tiktok":
+    render_tiktok_expense()
