@@ -585,74 +585,46 @@ def get_tiktok_expenses_data(files):
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="สรุปรายได้/ค่าใช้จ่าย", page_icon="📊", layout="wide")
 
-# --- ฟังก์ชัน Render (ส่วนนี้คงเดิมตามที่คุณมี) ---
-# หมายเหตุ: ตรวจสอบให้แน่ใจว่า import ฟังก์ชัน get_... จากไฟล์ของคุณไว้ด้านบนแล้ว
-# จากตัวอย่างนี้ สมมติว่ามีฟังก์ชันเหล่านั้นพร้อมใช้งานครับ
-
-def render_shopee_income():
-    st.subheader("💰 รายรับ Shopee")
-    st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
-    uploaded_file = st.file_uploader("เลือกไฟล์ PDF", type=["pdf"], key="shopee_uploader")
-    if uploaded_file:
-        with st.spinner("กำลังอ่านไฟล์..."):
-            df, warnings = get_shopee_data(uploaded_file)
-            if not df.empty:
-                df["ยอดสุทธิ"] = (df["ราคาสินค้า"] - df["ยอดคืนเงิน"].abs()) + df["เงินสนับสนุน"]
-                for w in warnings: st.warning(w)
-                st.dataframe(df)
-                # ... เพิ่มส่วนดาวน์โหลดตามเดิมของคุณ
-
-def render_shopee_expense():
-    st.subheader("📉 ค่าใช้จ่าย Shopee/SPX")
-    files = st.file_uploader("เลือกไฟล์ PDF", type=["pdf"], accept_multiple_files=True, key="shp_exp")
-    if files:
-        with st.spinner("กำลังประมวลผล..."):
-            df = get_shopee_expenses_data(files)
-            st.dataframe(df)
-
-def render_lazada_income():
-    st.subheader("💰 รายรับ Lazada")
-    uploaded_file = st.file_uploader("เลือกไฟล์ PDF", type=["pdf"], key="lzd_inc")
-    if uploaded_file:
-        df, warnings = get_lazada_data(uploaded_file)
-        st.dataframe(df)
-
-def render_lazada_expense():
-    st.subheader("📉 ค่าใช้จ่าย Lazada")
-    files = st.file_uploader("เลือกไฟล์ PDF", type=["pdf"], accept_multiple_files=True, key="lzd_exp")
-    if files:
-        df = get_lazada_expenses_data(files)
-        st.dataframe(df)
-
-def render_tiktok_expense():
-    st.subheader("📉 ค่าใช้จ่าย TikTok")
-    files = st.file_uploader("เลือกไฟล์ PDF", type=["pdf"], accept_multiple_files=True, key="ttk_exp")
-    if files:
-        df = get_tiktok_expenses_data(files)
-        st.dataframe(df)
-
-# --- ส่วนควบคุมหลัก (UI จัดใหม่) ---
-
 st.title("📊 โปรแกรมสรุปรายได้ / ค่าใช้จ่าย")
 
-# 1. การเลือกแพลตฟอร์ม
-st.markdown("### 🌐 เลือกแพลตฟอร์มที่ต้องการจัดการ")
-tab_shopee, tab_lazada, tab_tiktok = st.tabs(["🛍️ Shopee", "❤️ Lazada", "🎵 TikTok"])
+# --- โซนส่วนตัวแปรและสถานะ ---
+if "platform" not in st.session_state:
+    st.session_state.platform = "shopee"
 
-# 2. การจัดการ Logic ตาม Tab
-with tab_shopee:
-    section = st.radio("เลือกประเภทข้อมูล:", ["รายรับ", "ค่าใช้จ่าย"], horizontal=True)
-    if section == "รายรับ":
-        render_shopee_income()
-    else:
-        render_shopee_expense()
+# --- แผงปุ่มเลือก (ใช้แบบที่คุ้นเคยแต่ลดความเสี่ยง Error CSS) ---
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button("🛍️ Shopee", use_container_width=True): st.session_state.platform = "shopee"
+with col2:
+    if st.button("❤️ Lazada", use_container_width=True): st.session_state.platform = "lazada"
+with col3:
+    if st.button("🎵 TikTok", use_container_width=True): st.session_state.platform = "tiktok"
 
-with tab_lazada:
-    section = st.radio("เลือกประเภทข้อมูล:", ["รายรับ", "ค่าใช้จ่าย"], horizontal=True)
-    if section == "รายรับ":
-        render_lazada_income()
-    else:
-        render_lazada_expense()
+st.divider()
 
-with tab_tiktok:
+# --- ส่วน Logic หลัก ---
+def section_toggle(key_prefix, options):
+    state_key = f"{key_prefix}_section"
+    if state_key not in st.session_state: st.session_state[state_key] = options[0]
+    
+    cols = st.columns(len(options))
+    for i, opt in enumerate(options):
+        with cols[i]:
+            if st.button(opt, use_container_width=True, type="primary" if st.session_state[state_key] == opt else "secondary"):
+                st.session_state[state_key] = opt
+                st.rerun()
+    return st.session_state[state_key]
+
+# --- การทำงานหลักตาม Platform ---
+if st.session_state.platform == "shopee":
+    section = section_toggle("shopee", ["รายรับ", "ค่าใช้จ่าย (Shopee/SPX)"])
+    if section == "รายรับ": render_shopee_income()
+    else: render_shopee_expense()
+
+elif st.session_state.platform == "lazada":
+    section = section_toggle("lazada", ["รายรับ", "ค่าใช้จ่าย"])
+    if section == "รายรับ": render_lazada_income()
+    else: render_lazada_expense()
+
+elif st.session_state.platform == "tiktok":
     render_tiktok_expense()
