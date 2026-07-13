@@ -217,16 +217,18 @@ def get_shopee_data(file):
                 if not table_data or len(table_data[0] if table_data else []) < 8:
                     continue
 
-                # หาแถวหัวตาราง (มีคำว่า "ราคาสินค้า" และ "คืนให้ผู้ซื้อ") เพื่อระบุคอลัมน์ที่ต้องการ
+                # หาแถวหัวตาราง (ต้องมีอย่างน้อย "ราคาสินค้า") เพื่อระบุคอลัมน์ที่ต้องการ
+                # หมายเหตุ: บางรายงานไม่มีคอลัมน์ "จำนวนเงินที่ทำการคืนให้ผู้ซื้อ" เลย
+                # (ร้านไม่มียอดคืนเงินในช่วงนั้น) จึงไม่บังคับว่าต้องเจอครบทุกคอลัมน์
                 header_row_i = None
                 for ri, row in enumerate(table_data):
                     joined = skeleton("".join(c or "" for c in row))
-                    if skeleton("ราคาสินค้า") in joined and skeleton("คืนให้ผู้ซื้อ") in joined:
+                    if skeleton("ราคาสินค้า") in joined:
                         header_row_i = ri
                         break
                 if header_row_i is not None:
                     new_col_idx = find_column_indices(table_data[header_row_i])
-                    if len(new_col_idx) >= 3:
+                    if "price" in new_col_idx:
                         col_idx = new_col_idx
 
                 if not col_idx:
@@ -246,7 +248,11 @@ def get_shopee_data(file):
                         ("ship_paid_by_buyer", "เงินสนับสนุน"),
                     ]:
                         ci = col_idx.get(key)
-                        val = row_cols.get(ci) if ci is not None else None
+                        if ci is None:
+                            # คอลัมน์นี้ไม่มีในรายงานฉบับนี้เลย (เช่น ไม่มียอดคืนเงินทั้งเดือน) ถือเป็น 0
+                            entry[out_col] = 0.0
+                            continue
+                        val = row_cols.get(ci)
                         if val is None or val == "":
                             warnings.append(
                                 f"หน้า {page_num}: แถว {date_text} ไม่พบค่าคอลัมน์ '{key}'"
