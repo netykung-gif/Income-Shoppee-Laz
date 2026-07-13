@@ -341,77 +341,88 @@ def get_lazada_expenses_data(files):
     """
     data_list = []
     for file in files:
-        with pdfplumber.open(file) as pdf:
-            for idx, page in enumerate(pdf.pages):
-                text = page.extract_text()
-                if not text:
-                    continue
-                lines = [line.strip() for line in text.split("\n") if line.strip()]
+        try:
+            with pdfplumber.open(file) as pdf:
+                for idx, page in enumerate(pdf.pages):
+                    text = page.extract_text()
+                    if not text:
+                        continue
+                    lines = [line.strip() for line in text.split("\n") if line.strip()]
 
-                company_name = "Lazada"
-                doc_type = "Unknown Type"
-                doc_no = "Unknown"
-                doc_date = "Unknown"
-                total_amount = "Unknown"
+                    company_name = "Lazada"
+                    doc_type = "Unknown Type"
+                    doc_no = "Unknown"
+                    doc_date = "Unknown"
+                    total_amount = "Unknown"
 
-                if "Lazada Express" in text or "ลาซาด้า เอ็กซ์เพรส" in text:
-                    company_name = "Lazada Express"
+                    if "Lazada Express" in text or "ลาซาด้า เอ็กซ์เพรส" in text:
+                        company_name = "Lazada Express"
 
-                if "CREDIT NOTE" in text:
-                    doc_type = "Credit Note"
-                elif "Shipping Fee Receipt" in text:
-                    doc_type = "Shipping Fee"
-                elif "TAX INVOICE" in text:
-                    doc_type = "Tax Invoice"
+                    if "CREDIT NOTE" in text:
+                        doc_type = "Credit Note"
+                    elif "Shipping Fee Receipt" in text:
+                        doc_type = "Shipping Fee"
+                    elif "TAX INVOICE" in text:
+                        doc_type = "Tax Invoice"
 
-                for line in lines:
-                    if "Credit Note:" in line:
-                        m = re.search(r"Credit Note:\s*([A-Za-z0-9\-]+)", line, re.IGNORECASE)
-                        if m:
-                            doc_no = m.group(1)
-                    elif "Invoice No.:" in line:
-                        m = re.search(r"Invoice No\.:\s*([A-Za-z0-9\-]+)", line, re.IGNORECASE)
-                        if m:
-                            doc_no = m.group(1)
-
-                    if "Invoice Date:" in line:
-                        m = re.search(r"Invoice Date:\s*([\d\-]+)", line, re.IGNORECASE)
-                        if m:
-                            doc_date = m.group(1)
-                    elif "Date:" in line and "Digitally" not in line:
-                        m = re.search(r"Date:\s*([\d\-]+)", line, re.IGNORECASE)
-                        if m:
-                            doc_date = m.group(1)
-
-                    if "Total (Including Tax)" in line:
-                        m = re.search(r"([\d,]+\.\d{2})", line)
-                        if m:
-                            total_amount = m.group(1)
-                    elif "Net Total Shipping Fee" in line:
-                        m = re.search(r"([\d,]+\.\d{2})", line)
-                        if m:
-                            total_amount = m.group(1)
-
-                if total_amount == "Unknown":
-                    all_amounts = []
                     for line in lines:
-                        found = re.findall(r"([\d,]+\.\d{2})", line)
-                        if found and "7%" not in line and "3%" not in line and "1%" not in line:
-                            all_amounts.extend(found)
-                    if all_amounts:
-                        total_amount = all_amounts[-1]
+                        if "Credit Note:" in line:
+                            m = re.search(r"Credit Note:\s*([A-Za-z0-9\-]+)", line, re.IGNORECASE)
+                            if m:
+                                doc_no = m.group(1)
+                        elif "Invoice No.:" in line:
+                            m = re.search(r"Invoice No\.:\s*([A-Za-z0-9\-]+)", line, re.IGNORECASE)
+                            if m:
+                                doc_no = m.group(1)
 
-                total_amount = parse_num(total_amount) if total_amount != "Unknown" else None
+                        if "Invoice Date:" in line:
+                            m = re.search(r"Invoice Date:\s*([\d\-]+)", line, re.IGNORECASE)
+                            if m:
+                                doc_date = m.group(1)
+                        elif "Date:" in line and "Digitally" not in line:
+                            m = re.search(r"Date:\s*([\d\-]+)", line, re.IGNORECASE)
+                            if m:
+                                doc_date = m.group(1)
 
-                data_list.append({
-                    "ไฟล์": getattr(file, "name", ""),
-                    "Page": idx + 1,
-                    "Company": company_name,
-                    "Document Type": doc_type,
-                    "Document No.": doc_no,
-                    "Date": doc_date,
-                    "Total Amount": total_amount,
-                })
+                        if "Total (Including Tax)" in line:
+                            m = re.search(r"([\d,]+\.\d{2})", line)
+                            if m:
+                                total_amount = m.group(1)
+                        elif "Net Total Shipping Fee" in line:
+                            m = re.search(r"([\d,]+\.\d{2})", line)
+                            if m:
+                                total_amount = m.group(1)
+
+                    if total_amount == "Unknown":
+                        all_amounts = []
+                        for line in lines:
+                            found = re.findall(r"([\d,]+\.\d{2})", line)
+                            if found and "7%" not in line and "3%" not in line and "1%" not in line:
+                                all_amounts.extend(found)
+                        if all_amounts:
+                            total_amount = all_amounts[-1]
+
+                    total_amount = parse_num(total_amount) if total_amount != "Unknown" else None
+
+                    data_list.append({
+                        "ไฟล์": getattr(file, "name", ""),
+                        "Page": idx + 1,
+                        "Company": company_name,
+                        "Document Type": doc_type,
+                        "Document No.": doc_no,
+                        "Date": doc_date,
+                        "Total Amount": total_amount,
+                    })
+        except Exception as e:
+            data_list.append({
+                "ไฟล์": getattr(file, "name", ""),
+                "Page": None,
+                "Company": "Lazada",
+                "Document Type": f"อ่านไฟล์นี้ไม่สำเร็จ: {e}",
+                "Document No.": "Unknown",
+                "Date": "Unknown",
+                "Total Amount": None,
+            })
 
     return pd.DataFrame(data_list)
 
@@ -426,80 +437,91 @@ def get_shopee_expenses_data(files):
     """
     data_list = []
     for file in files:
-        with pdfplumber.open(file) as pdf:
-            for idx, page in enumerate(pdf.pages):
-                text = page.extract_text()
-                if not text:
-                    continue
-                lines = [line.strip() for line in text.split("\n") if line.strip()]
+        try:
+            with pdfplumber.open(file) as pdf:
+                for idx, page in enumerate(pdf.pages):
+                    text = page.extract_text()
+                    if not text:
+                        continue
+                    lines = [line.strip() for line in text.split("\n") if line.strip()]
 
-                shopee = "Shopee" in text or "Receipt/Tax Invoice" in text
-                spx = "SPX Express" in text or ("Receipt" in text and not shopee)
+                    shopee = "Shopee" in text or "Receipt/Tax Invoice" in text
+                    spx = "SPX Express" in text or ("Receipt" in text and not shopee)
 
-                total_amount = "Unknown"
-                doc_no = "Unknown"
-                doc_date = "Unknown"
+                    total_amount = "Unknown"
+                    doc_no = "Unknown"
+                    doc_date = "Unknown"
 
-                for i, line in enumerate(lines):
-                    if ("เลขที่" in line or "No." in line) and re.search(r"[A-Z]{3,}", line):
-                        top_match = re.search(r"([A-Z0-9\-]{10,})", line)
-                        if top_match:
-                            top_no = top_match.group(1)
-                            bottom_no = ""
-                            if i + 1 < len(lines):
-                                next_line = lines[i + 1]
-                                bottom_match = re.search(r"([0-9]{4,}\-[0-9]{4,})", next_line)
-                                if not bottom_match:
-                                    bottom_match = re.search(r"([0-9\-]{6,15})", next_line)
-                                if bottom_match:
-                                    bottom_no = bottom_match.group(1)
-                            doc_no = f"{top_no} / {bottom_no}" if bottom_no else top_no
+                    for i, line in enumerate(lines):
+                        if ("เลขที่" in line or "No." in line) and re.search(r"[A-Z]{3,}", line):
+                            top_match = re.search(r"([A-Z0-9\-]{10,})", line)
+                            if top_match:
+                                top_no = top_match.group(1)
+                                bottom_no = ""
+                                if i + 1 < len(lines):
+                                    next_line = lines[i + 1]
+                                    bottom_match = re.search(r"([0-9]{4,}\-[0-9]{4,})", next_line)
+                                    if not bottom_match:
+                                        bottom_match = re.search(r"([0-9\-]{6,15})", next_line)
+                                    if bottom_match:
+                                        bottom_no = bottom_match.group(1)
+                                doc_no = f"{top_no} / {bottom_no}" if bottom_no else top_no
 
-                    if "วันที่" in line or "Date" in line:
-                        m = re.search(r"(\d{2}/\d{2}/\d{4})", line)
-                        if m:
-                            doc_date = m.group(1)
+                        if "วันที่" in line or "Date" in line:
+                            m = re.search(r"(\d{2}/\d{2}/\d{4})", line)
+                            if m:
+                                doc_date = m.group(1)
 
-                shopee_match = re.search(r"Included VAT\)?\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
-                if not shopee_match:
-                    shopee_match = re.search(
-                        r"Total Value of Services \(Included VAT\)\s*([\d,]+\.\d{2})", text, re.IGNORECASE
-                    )
+                    shopee_match = re.search(r"Included VAT\)?\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
+                    if not shopee_match:
+                        shopee_match = re.search(
+                            r"Total Value of Services \(Included VAT\)\s*([\d,]+\.\d{2})", text, re.IGNORECASE
+                        )
 
-                spx_match = re.search(r"Total amount\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
-                if not spx_match:
-                    spx_match = re.search(
-                        r"จำนวนเงินรวม/\s*Total\s*amount\s*([\d,]+\.\d{2})", text, re.IGNORECASE
-                    )
+                    spx_match = re.search(r"Total amount\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
+                    if not spx_match:
+                        spx_match = re.search(
+                            r"จำนวนเงินรวม/\s*Total\s*amount\s*([\d,]+\.\d{2})", text, re.IGNORECASE
+                        )
 
-                if shopee:
-                    company_name = "Shopee"
-                    doc_type = "Tax Invoice"
-                    if shopee_match:
-                        total_amount = shopee_match.group(1)
-                elif spx:
-                    company_name = "SPX Express"
-                    doc_type = "Shipping Fee"
-                    if spx_match:
-                        total_amount = spx_match.group(1)
-                else:
-                    company_name = "Unknown"
-                    doc_type = "Unknown Type"
-                    total_match = re.search(r"(?:Total|รวม)\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
-                    if total_match:
-                        total_amount = total_match.group(1)
+                    if shopee:
+                        company_name = "Shopee"
+                        doc_type = "Tax Invoice"
+                        if shopee_match:
+                            total_amount = shopee_match.group(1)
+                    elif spx:
+                        company_name = "SPX Express"
+                        doc_type = "Shipping Fee"
+                        if spx_match:
+                            total_amount = spx_match.group(1)
+                    else:
+                        company_name = "Unknown"
+                        doc_type = "Unknown Type"
+                        total_match = re.search(r"(?:Total|รวม)\s*([\d,]+\.\d{2})", text, re.IGNORECASE)
+                        if total_match:
+                            total_amount = total_match.group(1)
 
-                total_amount = parse_num(total_amount) if total_amount != "Unknown" else None
+                    total_amount = parse_num(total_amount) if total_amount != "Unknown" else None
 
-                data_list.append({
-                    "ไฟล์": getattr(file, "name", ""),
-                    "Page": idx + 1,
-                    "Company": company_name,
-                    "Document Type": doc_type,
-                    "Document No.": doc_no,
-                    "Date": doc_date,
-                    "Total Amount": total_amount,
-                })
+                    data_list.append({
+                        "ไฟล์": getattr(file, "name", ""),
+                        "Page": idx + 1,
+                        "Company": company_name,
+                        "Document Type": doc_type,
+                        "Document No.": doc_no,
+                        "Date": doc_date,
+                        "Total Amount": total_amount,
+                    })
+        except Exception as e:
+            data_list.append({
+                "ไฟล์": getattr(file, "name", ""),
+                "Page": None,
+                "Company": "Shopee/SPX",
+                "Document Type": f"อ่านไฟล์นี้ไม่สำเร็จ: {e}",
+                "Document No.": "Unknown",
+                "Date": "Unknown",
+                "Total Amount": None,
+            })
 
     return pd.DataFrame(data_list)
 
@@ -516,66 +538,77 @@ def get_tiktok_expenses_data(files):
     """
     data_list = []
     for file in files:
-        with pdfplumber.open(file) as pdf:
-            for idx, page in enumerate(pdf.pages):
-                text = fix_thai(page.extract_text() or "")
-                if not text:
-                    continue
+        try:
+            with pdfplumber.open(file) as pdf:
+                for idx, page in enumerate(pdf.pages):
+                    text = fix_thai(page.extract_text() or "")
+                    if not text:
+                        continue
 
-                # --- เวนเดอร์ (ชื่อมุมซ้ายบนของเอกสาร) ---
-                vendor = "Unknown"
-                m = re.search(r"Creator name:\s*(.+)", text)
-                if m:
-                    vendor = m.group(1).strip()
-                else:
-                    m = re.search(r"^(.*(?:Ltd\.|Co\., Ltd\.|Pte\. Ltd\.).*)$", text, re.MULTILINE)
+                    # --- เวนเดอร์ (ชื่อมุมซ้ายบนของเอกสาร) ---
+                    vendor = "Unknown"
+                    m = re.search(r"Creator name:\s*(.+)", text)
                     if m:
                         vendor = m.group(1).strip()
+                    else:
+                        m = re.search(r"^(.*(?:Ltd\.|Co\., Ltd\.|Pte\. Ltd\.).*)$", text, re.MULTILINE)
+                        if m:
+                            vendor = m.group(1).strip()
 
-                # --- ประเภทเอกสาร ---
-                if "Creator commission" in text:
-                    doc_type = "Creator Commission"
-                elif "Logistics fee" in text or "Logistics" in text:
-                    doc_type = "Logistics Fee"
-                elif "Affiliate Service Fee" in text or "Affiliate commission" in text:
-                    doc_type = "Affiliate Service Fee"
-                elif "CREDIT NOTE" in text:
-                    doc_type = "Credit Note"
-                elif "TAX INVOICE" in text or "Tax Invoice" in text:
-                    doc_type = "Tax Invoice"
-                else:
-                    doc_type = "Unknown Type"
+                    # --- ประเภทเอกสาร ---
+                    if "Creator commission" in text:
+                        doc_type = "Creator Commission"
+                    elif "Logistics fee" in text or "Logistics" in text:
+                        doc_type = "Logistics Fee"
+                    elif "Affiliate Service Fee" in text or "Affiliate commission" in text:
+                        doc_type = "Affiliate Service Fee"
+                    elif "CREDIT NOTE" in text:
+                        doc_type = "Credit Note"
+                    elif "TAX INVOICE" in text or "Tax Invoice" in text:
+                        doc_type = "Tax Invoice"
+                    else:
+                        doc_type = "Unknown Type"
 
-                # --- เลขที่เอกสาร (รองรับทั้ง : ปกติ และ ： แบบเต็มความกว้าง, ไม่สนตัวพิมพ์เล็ก-ใหญ่) ---
-                m = re.search(
-                    r"(?:Receipt number|Invoice number|Receipt Number|Credit note number)\s*[:：]\s*([A-Za-z0-9]+)",
-                    text,
-                    re.IGNORECASE,
-                )
-                doc_no = m.group(1) if m else "Unknown"
+                    # --- เลขที่เอกสาร (รองรับทั้ง : ปกติ และ ： แบบเต็มความกว้าง, ไม่สนตัวพิมพ์เล็ก-ใหญ่) ---
+                    m = re.search(
+                        r"(?:Receipt number|Invoice number|Receipt Number|Credit note number)\s*[:：]\s*([A-Za-z0-9]+)",
+                        text,
+                        re.IGNORECASE,
+                    )
+                    doc_no = m.group(1) if m else "Unknown"
 
-                # --- วันที่เอกสาร ---
-                m = re.search(
-                    r"(?:Receipt date|Invoice date|Receipt Date|Credit note date)\s*[:：]\s*([A-Za-z]+\s+\d{1,2},\s*\d{4})",
-                    text,
-                    re.IGNORECASE,
-                )
-                doc_date = m.group(1) if m else "Unknown"
+                    # --- วันที่เอกสาร ---
+                    m = re.search(
+                        r"(?:Receipt date|Invoice date|Receipt Date|Credit note date)\s*[:：]\s*([A-Za-z]+\s+\d{1,2},\s*\d{4})",
+                        text,
+                        re.IGNORECASE,
+                    )
+                    doc_date = m.group(1) if m else "Unknown"
 
-                # --- ยอดเงินรวม (เอกสารบางแบบเขียน "Total amount" ตัว a เล็ก จึงต้องไม่สนตัวพิมพ์เล็ก-ใหญ่) ---
-                m = re.search(r"Total Amount\D*?([\d,]+\.\d{2})", text, re.IGNORECASE)
-                total_amount = parse_num(m.group(1)) if m else None
+                    # --- ยอดเงินรวม (เอกสารบางแบบเขียน "Total amount" ตัว a เล็ก จึงต้องไม่สนตัวพิมพ์เล็ก-ใหญ่) ---
+                    m = re.search(r"Total Amount\D*?([\d,]+\.\d{2})", text, re.IGNORECASE)
+                    total_amount = parse_num(m.group(1)) if m else None
 
-                data_list.append({
-                    "ไฟล์": getattr(file, "name", ""),
-                    "Page": idx + 1,
-                    "Company": "TikTok Shop",
-                    "Vendor": vendor,
-                    "Document Type": doc_type,
-                    "Document No.": doc_no,
-                    "Date": doc_date,
-                    "Total Amount": total_amount,
-                })
+                    data_list.append({
+                        "ไฟล์": getattr(file, "name", ""),
+                        "Page": idx + 1,
+                        "Company": "TikTok Shop",
+                        "Vendor": vendor,
+                        "Document Type": doc_type,
+                        "Document No.": doc_no,
+                        "Date": doc_date,
+                        "Total Amount": total_amount,
+                    })
+        except Exception as e:
+            data_list.append({
+                "ไฟล์": getattr(file, "name", ""),
+                "Page": None,
+                "Company": "TikTok Shop",
+                "Document Type": f"อ่านไฟล์นี้ไม่สำเร็จ: {e}",
+                "Document No.": "Unknown",
+                "Date": "Unknown",
+                "Total Amount": None,
+            })
 
     return pd.DataFrame(data_list)
 
@@ -585,118 +618,200 @@ def get_tiktok_expenses_data(files):
 # ---------------------------------------------------------------------------
 st.set_page_config(page_title="สรุปรายได้/ค่าใช้จ่าย", page_icon="📊", layout="wide")
 
-# --- ฟังก์ชันช่วยสร้างไฟล์ Excel ---
-def to_excel(df):
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='Sheet1')
-    return output.getvalue()
-
-# --- 2. จัดการสถานะ Platform ---
-if "platform" not in st.session_state:
-    st.session_state.platform = "shopee"
-
-current_platform = st.session_state.platform
-
-# --- 3. 🎨 CSS สไตล์ Pinterest Card ---
-st.markdown("""
-<style>
-    div[data-testid="stHorizontalBlock"]:first-of-type button {
-        height: 180px !important; 
-        border-radius: 24px !important; 
-        transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-        font-size: 56px !important; 
-        font-weight: 800 !important;
-        white-space: pre-line !important;
-        line-height: 1.3 !important;
-    }
-    div[data-testid="stHorizontalBlock"]:first-of-type button:hover { transform: translateY(-10px) !important; }
-    
-    div[data-testid="stHorizontalBlock"]:first-of-type button[data-testid="baseButton-secondary"] {
-        background-color: #ffffff !important;
-        border: 2px solid #f0f0f0 !important;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.05) !important;
-        color: #555555 !important;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# --- 4. 🎨 ไฮไลท์การ์ดตามแบรนด์ ---
-if current_platform == "shopee":
-    st.markdown("<style>div[data-testid='stHorizontalBlock']:first-of-type button[data-testid='baseButton-primary'] { background: linear-gradient(135deg, #ff7315, #EE4D2D) !important; color: white !important; }</style>", unsafe_allow_html=True)
-elif current_platform == "lazada":
-    st.markdown("<style>div[data-testid='stHorizontalBlock']:first-of-type button[data-testid='baseButton-primary'] { background: linear-gradient(135deg, #2a2dbb, #1B1F8A) !important; color: white !important; }</style>", unsafe_allow_html=True)
-elif current_platform == "tiktok":
-    st.markdown("<style>div[data-testid='stHorizontalBlock']:first-of-type button[data-testid='baseButton-primary'] { background: linear-gradient(135deg, #444444, #000000) !important; color: white !important; }</style>", unsafe_allow_html=True)
-
 st.title("📊 โปรแกรมสรุปรายได้ / ค่าใช้จ่าย")
 
-# --- 5. วางการ์ดปุ่มควบคุม ---
-cols = st.columns(3)
-with cols[0]:
-    if st.button("🛍️\nShopee", use_container_width=True, type="primary" if current_platform == "shopee" else "secondary"):
-        st.session_state.platform = "shopee"; st.rerun()
-with cols[1]:
-    if st.button("❤️\nLazada", use_container_width=True, type="primary" if current_platform == "lazada" else "secondary"):
-        st.session_state.platform = "lazada"; st.rerun()
-with cols[2]:
-    if st.button("🎵\nTikTok", use_container_width=True, type="primary" if current_platform == "tiktok" else "secondary"):
-        st.session_state.platform = "tiktok"; st.rerun()
 
-st.divider()
-
-# --- 6. ฟังก์ชันการทำงานและปุ่มดาวน์โหลด ---
 def render_shopee_income():
-    uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"])
-    if uploaded_file:
-        df, _ = get_shopee_data(uploaded_file)
-        df["ยอดสุทธิ"] = (df["ราคาสินค้า"] - df["ยอดคืนเงิน"].abs()) + df["เงินสนับสนุน"]
-        st.dataframe(df)
-        st.download_button("📥 ดาวน์โหลด Excel", to_excel(df), "shopee_income.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.write("อัปโหลดไฟล์ PDF รายงาน Shopee เพื่อคำนวณยอดสุทธิ")
+    uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Shopee", type=["pdf"], key="shopee_uploader")
+    if uploaded_file is None:
+        return
+    with st.spinner("กำลังอ่านไฟล์..."):
+        df, warnings = get_shopee_data(uploaded_file)
+    if df.empty:
+        st.error(
+            "ไม่สามารถดึงข้อมูลจากไฟล์นี้ได้ กรุณาตรวจสอบว่าเป็นไฟล์รายงานการเงิน Shopee "
+            "ที่มีตาราง 'รายละเอียดการโอนเงิน' หรือไม่"
+        )
+        return
+    df["ยอดสุทธิ"] = (df["ราคาสินค้า"] - df["ยอดคืนเงิน"].abs()) + df["เงินสนับสนุน"]
+    for w in warnings:
+        st.warning(w)
+    if not warnings:
+        st.success(f"ดึงข้อมูลสำเร็จ {len(df)} แถว และผลรวมตรงกับยอดสรุปในรายงาน ✅")
+    st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+    st.dataframe(df)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Shopee")
+    st.download_button(
+        label="📥 ดาวน์โหลดไฟล์ Excel", data=output.getvalue(),
+        file_name="สรุปรายได้_Shopee.xlsx", mime="application/vnd.ms-excel", key="shopee_download",
+    )
+
 
 def render_lazada_income():
-    uploaded_file = st.file_uploader("เลือกไฟล์ PDF ของ Lazada", type=["pdf"])
-    if uploaded_file:
-        df, _ = get_lazada_data(uploaded_file)
-        st.dataframe(df)
-        st.download_button("📥 ดาวน์โหลด Excel", to_excel(df), "lazada_income.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.write("อัปโหลดไฟล์ PDF รายงาน Lazada เพื่อดึงวันที่และยอดรายการขาย")
+    uploaded_file_lzd = st.file_uploader("เลือกไฟล์ PDF ของ Lazada", type=["pdf"], key="lazada_uploader")
+    if uploaded_file_lzd is None:
+        return
+    with st.spinner("กำลังอ่านไฟล์..."):
+        df_lzd, warnings_lzd = get_lazada_data(uploaded_file_lzd)
+    if df_lzd.empty:
+        st.error(
+            "ไม่สามารถดึงข้อมูลจากไฟล์นี้ได้ กรุณาตรวจสอบว่าเป็นไฟล์รายงานการเงิน Lazada "
+            "ที่มีตาราง 'รายละเอียดธุรกรรม' หรือไม่"
+        )
+        return
+    for w in warnings_lzd:
+        st.warning(w)
+    if not warnings_lzd:
+        st.success(f"ดึงข้อมูลสำเร็จ {len(df_lzd)} แถว และผลรวมตรงกับยอดสรุปในรายงาน ✅")
+    st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+    st.dataframe(df_lzd)
+    output_lzd = io.BytesIO()
+    with pd.ExcelWriter(output_lzd, engine="xlsxwriter") as writer:
+        df_lzd.to_excel(writer, index=False, sheet_name="Lazada")
+    st.download_button(
+        label="📥 ดาวน์โหลดไฟล์ Excel", data=output_lzd.getvalue(),
+        file_name="สรุปรายได้_Lazada.xlsx", mime="application/vnd.ms-excel", key="lazada_download",
+    )
+
 
 def render_lazada_expense():
-    files = st.file_uploader("เลือกไฟล์ PDF ค่าใช้จ่าย Lazada", type=["pdf"], accept_multiple_files=True)
-    if files:
-        df = get_lazada_expenses_data(files)
-        st.dataframe(df)
-        st.download_button("📥 ดาวน์โหลด Excel", to_excel(df), "lazada_expense.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.write("อัปโหลดไฟล์ PDF ใบเสร็จ/ใบกำกับภาษี/Credit Note ค่าใช้จ่ายของ Lazada (อัปโหลดได้หลายไฟล์ แต่ละหน้าถือเป็น 1 เอกสาร)")
+    files_lzd_exp = st.file_uploader(
+        "เลือกไฟล์ PDF ค่าใช้จ่าย Lazada", type=["pdf"], accept_multiple_files=True, key="lzd_exp_uploader"
+    )
+    if not files_lzd_exp:
+        return
+    with st.spinner("กำลังอ่านไฟล์..."):
+        df_lzd_exp = get_lazada_expenses_data(files_lzd_exp)
+    if df_lzd_exp.empty:
+        st.error("ไม่สามารถดึงข้อมูลจากไฟล์ที่อัปโหลดได้")
+        return
+    st.success(f"ดึงข้อมูลสำเร็จ {len(df_lzd_exp)} รายการ")
+    st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+    st.dataframe(df_lzd_exp)
+    output_lzd_exp = io.BytesIO()
+    with pd.ExcelWriter(output_lzd_exp, engine="xlsxwriter") as writer:
+        df_lzd_exp.to_excel(writer, index=False, sheet_name="Lazada Expenses")
+    st.download_button(
+        label="📥 ดาวน์โหลดไฟล์ Excel", data=output_lzd_exp.getvalue(),
+        file_name="ค่าใช้จ่าย_Lazada.xlsx", mime="application/vnd.ms-excel", key="lzd_exp_download",
+    )
+
 
 def render_shopee_expense():
-    files = st.file_uploader("เลือกไฟล์ PDF ค่าใช้จ่าย Shopee/SPX", type=["pdf"], accept_multiple_files=True)
-    if files:
-        df = get_shopee_expenses_data(files)
-        st.dataframe(df)
-        st.download_button("📥 ดาวน์โหลด Excel", to_excel(df), "shopee_expense.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.write("อัปโหลดไฟล์ PDF ใบเสร็จ/ใบกำกับภาษีค่าใช้จ่ายของ Shopee/SPX Express (อัปโหลดได้หลายไฟล์ แต่ละหน้าถือเป็น 1 เอกสาร)")
+    files_shp_exp = st.file_uploader(
+        "เลือกไฟล์ PDF ค่าใช้จ่าย Shopee/SPX", type=["pdf"], accept_multiple_files=True, key="shp_exp_uploader"
+    )
+    if not files_shp_exp:
+        return
+    with st.spinner("กำลังอ่านไฟล์..."):
+        df_shp_exp = get_shopee_expenses_data(files_shp_exp)
+    if df_shp_exp.empty:
+        st.error("ไม่สามารถดึงข้อมูลจากไฟล์ที่อัปโหลดได้")
+        return
+    st.success(f"ดึงข้อมูลสำเร็จ {len(df_shp_exp)} รายการ")
+    st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+    st.dataframe(df_shp_exp)
+    output_shp_exp = io.BytesIO()
+    with pd.ExcelWriter(output_shp_exp, engine="xlsxwriter") as writer:
+        df_shp_exp.to_excel(writer, index=False, sheet_name="Shopee_SPX Expenses")
+    st.download_button(
+        label="📥 ดาวน์โหลดไฟล์ Excel", data=output_shp_exp.getvalue(),
+        file_name="ค่าใช้จ่าย_Shopee_SPX.xlsx", mime="application/vnd.ms-excel", key="shp_exp_download",
+    )
+
 
 def render_tiktok_expense():
-    files = st.file_uploader("เลือกไฟล์ PDF ค่าใช้จ่าย TikTok Shop", type=["pdf"], accept_multiple_files=True)
-    if files:
-        df = get_tiktok_expenses_data(files)
-        st.dataframe(df)
-        st.download_button("📥 ดาวน์โหลด Excel", to_excel(df), "tiktok_expense.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.write(
+        "อัปโหลดไฟล์ PDF ใบเสร็จ/ใบกำกับภาษีค่าใช้จ่ายฝั่ง TikTok Shop "
+        "(ค่าขนส่ง / ค่าธรรมเนียม Affiliate / ค่าคอมมิชชั่นครีเอเตอร์ ฯลฯ — อัปโหลดได้หลายไฟล์ แต่ละหน้าถือเป็น 1 เอกสาร)"
+    )
+    files_ttk_exp = st.file_uploader(
+        "เลือกไฟล์ PDF ค่าใช้จ่าย TikTok", type=["pdf"], accept_multiple_files=True, key="ttk_exp_uploader"
+    )
+    if not files_ttk_exp:
+        return
+    with st.spinner("กำลังอ่านไฟล์..."):
+        df_ttk_exp = get_tiktok_expenses_data(files_ttk_exp)
+    if df_ttk_exp.empty:
+        st.error("ไม่สามารถดึงข้อมูลจากไฟล์ที่อัปโหลดได้")
+        return
+    st.success(f"ดึงข้อมูลสำเร็จ {len(df_ttk_exp)} รายการ")
+    st.write("ตัวอย่างข้อมูลที่ดึงได้:")
+    st.dataframe(df_ttk_exp)
+    output_ttk_exp = io.BytesIO()
+    with pd.ExcelWriter(output_ttk_exp, engine="xlsxwriter") as writer:
+        df_ttk_exp.to_excel(writer, index=False, sheet_name="TikTok Expenses")
+    st.download_button(
+        label="📥 ดาวน์โหลดไฟล์ Excel", data=output_ttk_exp.getvalue(),
+        file_name="ค่าใช้จ่าย_TikTok.xlsx", mime="application/vnd.ms-excel", key="ttk_exp_download",
+    )
 
-# --- 7. หน้าจัดการข้อมูล ---
-def section_toggle(key, options):
-    if f"{key}_sec" not in st.session_state: st.session_state[f"{key}_sec"] = options[0]
-    cols = st.columns(len(options))
-    for i, opt in enumerate(options):
-        if cols[i].button(opt, use_container_width=True, type="primary" if st.session_state[f"{key}_sec"] == opt else "secondary"):
-            st.session_state[f"{key}_sec"] = opt; st.rerun()
-    return st.session_state[f"{key}_sec"]
 
-st.subheader(f"จัดการข้อมูล: {current_platform.capitalize()}")
+# --- แผงเลือกแพลตฟอร์ม: ปุ่ม Streamlit จริง (คลิกได้ชัวร์ 100%) แต่งสีตามธีมแบรนด์ + ยกตัวตอน hover ---
+PLATFORMS = {
+    "shopee": {"label": "🛍️ Shopee", "color": "#EE4D2D", "tint": "#FDEEEA"},
+    "lazada": {"label": "❤️ Lazada", "color": "#1B1F8A", "tint": "#ECEDF7"},
+    "tiktok": {"label": "🎵 TikTok", "color": "#111111", "tint": "#FBEAF0"},
+}
+PLATFORM_KEYS = list(PLATFORMS.keys())
+
+if "platform" not in st.session_state:
+    st.session_state.platform = "shopee"
+current_platform = st.session_state.platform
+
+theme_css = "<style>"
+theme_css += (
+    "div[data-testid='stHorizontalBlock'] button{height:88px; border-radius:12px; "
+    "font-size:15px; font-weight:600; color:#222 !important; border-width:0 0 3px 0 !important; "
+    "border-style:solid !important; transition:transform .15s ease, box-shadow .15s ease;}"
+    "div[data-testid='stHorizontalBlock'] button:hover{transform:translateY(-3px); "
+    "box-shadow:0 8px 16px rgba(0,0,0,.12);}"
+)
+for i, key in enumerate(PLATFORM_KEYS, start=1):
+    p = PLATFORMS[key]
+    active = key == current_platform
+    border = p["color"] if active else "transparent"
+    theme_css += (
+        f"div[data-testid='stHorizontalBlock'] > div:nth-of-type({i}) button{{"
+        f"background:{p['tint']} !important; border-color:{border} !important;}}"
+    )
+theme_css += "</style>"
+st.markdown(theme_css, unsafe_allow_html=True)
+
+col_ratio = [2 if k == current_platform else 1 for k in PLATFORM_KEYS]
+cols = st.columns(col_ratio)
+for col, key in zip(cols, PLATFORM_KEYS):
+    with col:
+        if st.button(PLATFORMS[key]["label"], key=f"platform_btn_{key}", use_container_width=True):
+            st.session_state.platform = key
+            st.rerun()
+
+
+def section_toggle(key_prefix, options):
+    state_key = f"{key_prefix}_section"
+    if state_key not in st.session_state:
+        st.session_state[state_key] = options[0]
+    btn_cols = st.columns(len(options))
+    for c, opt in zip(btn_cols, options):
+        with c:
+            btn_type = "primary" if opt == st.session_state[state_key] else "secondary"
+            if st.button(opt, key=f"{key_prefix}_btn_{opt}", use_container_width=True, type=btn_type):
+                st.session_state[state_key] = opt
+                st.rerun()
+    return st.session_state[state_key]
+
+
 if current_platform == "shopee":
-    if section_toggle("shopee", ["รายรับ", "ค่าใช้จ่าย"]) == "รายรับ": render_shopee_income()
-    else: render_shopee_expense()
+    section = section_toggle("shopee", ["รายรับ", "ค่าใช้จ่าย (Shopee/SPX)"])
+    _ = render_shopee_income() if section == "รายรับ" else render_shopee_expense()
 elif current_platform == "lazada":
-    if section_toggle("lazada", ["รายรับ", "ค่าใช้จ่าย"]) == "รายรับ": render_lazada_income()
-    else: render_lazada_expense()
-elif current_platform == "tiktok":
-    render_tiktok_expense()
+    section = section_toggle("lazada", ["รายรับ", "ค่าใช้จ่าย"])
+    _ = render_lazada_income() if section == "รายรับ" else render_lazada_expense()
+else:
+    _ = render_tiktok_expense()
