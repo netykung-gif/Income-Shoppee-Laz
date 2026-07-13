@@ -254,6 +254,8 @@ def get_shopee_data(file):
                         entry[out_col] = parse_num(val)
                     data.append(entry)
 
+            page.flush_cache()  # ป้องกันหน่วยความจำสะสมเมื่อไฟล์มีหลายหน้า
+
     df = pd.DataFrame(data)
 
     # ตรวจสอบผลรวมกับยอดสรุปในตัวรายงานเอง เพื่อความปลอดภัย (ไม่ให้ข้อมูลผิดเงียบๆ)
@@ -317,6 +319,8 @@ def get_lazada_data(file):
                     "วันที่ทำรายการ": iso_date,
                     "ยอดรายการขาย": parse_num(nums[0]),
                 })
+
+            page.flush_cache()  # ป้องกันหน่วยความจำสะสมเมื่อไฟล์มีหลายหน้า
 
     df = pd.DataFrame(rows)
 
@@ -413,6 +417,8 @@ def get_lazada_expenses_data(files):
                         "Date": doc_date,
                         "Total Amount": total_amount,
                     })
+
+                    page.flush_cache()  # ป้องกันหน่วยความจำสะสมเมื่อไฟล์มีหลายหน้า
         except Exception as e:
             data_list.append({
                 "ไฟล์": getattr(file, "name", ""),
@@ -512,6 +518,8 @@ def get_shopee_expenses_data(files):
                         "Date": doc_date,
                         "Total Amount": total_amount,
                     })
+
+                    page.flush_cache()  # ป้องกันหน่วยความจำสะสมเมื่อไฟล์มีหลายหน้า
         except Exception as e:
             data_list.append({
                 "ไฟล์": getattr(file, "name", ""),
@@ -599,6 +607,8 @@ def get_tiktok_expenses_data(files):
                         "Date": doc_date,
                         "Total Amount": total_amount,
                     })
+
+                    page.flush_cache()  # ป้องกันหน่วยความจำสะสมเมื่อไฟล์มีหลายหน้า
         except Exception as e:
             data_list.append({
                 "ไฟล์": getattr(file, "name", ""),
